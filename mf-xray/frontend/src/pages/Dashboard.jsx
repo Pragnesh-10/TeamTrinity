@@ -128,20 +128,7 @@ export default function Dashboard({ result, onReset }) {
         </div>
       </section>
 
-      {/* Enterprise Audit Trail */}
-      <section className="bg-surface p-6 rounded-2xl border border-border">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <span className="text-gray-400">📋</span> Autonomous Audit Trail
-        </h3>
-        <div className="bg-background border border-border rounded-lg p-4 font-mono text-xs text-gray-400 space-y-2 max-h-48 overflow-y-auto">
-          {audit_trail && audit_trail.map((log, idx) => (
-            <div key={idx} className="flex gap-4">
-              <span className="text-teal whitespace-nowrap">[{idx+1}]</span>
-              <span>{log}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+
 
       {/* Compliance */}
       <div className="mt-8 border border-amber/30 bg-amber/5 px-6 py-4 rounded-lg flex justify-center text-center text-amber text-sm font-medium">
