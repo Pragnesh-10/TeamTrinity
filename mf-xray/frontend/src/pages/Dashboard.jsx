@@ -29,7 +29,7 @@ export default function Dashboard({ result, onReset }) {
           <h2 className="text-5xl font-mono font-bold text-teal drop-shadow-[0_0_15px_rgba(0,212,170,0.5)]">
             {xirr}
           </h2>
-          <p className="text-xs text-gray-500 mt-3 font-mono">Computed via numpy_financial</p>
+
         </div>
         
         <div className="bg-surface p-6 rounded-2xl border border-border md:col-span-3 grid grid-cols-4 gap-4 text-center items-center">
