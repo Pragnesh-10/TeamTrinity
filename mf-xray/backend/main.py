@@ -32,12 +32,20 @@ class EnterpriseAgentOrchestrator:
             # Graceful Degradation / Failure Recovery
             audit_trail.append("ParserAgent recovered via graceful degradation to standard simulated 6-fund portfolio.")
             funds = {
-                "Mirae Asset Large Cap": [{"date": "2023-11-10", "amount": 100000, "units": 800.0, "nav": 125.0, "type": "BUY"}], # STCG
-                "HDFC Flexi Cap": [{"date": "2023-08-15", "amount": 150000, "units": 1000.0, "nav": 150.0, "type": "BUY"}], # STCG
-                "SBI Bluechip Fund": [{"date": "2020-04-01", "amount": 250000, "units": 2000.0, "nav": 125.0, "type": "BUY"}], # PURE LTCG (Target for sell)
-                "Parag Parikh Flexi Cap": [{"date": "2024-01-01", "amount": 50000, "units": 500.0, "nav": 100.0, "type": "BUY"}], # STCG
-                "ICICI Pru Value Discovery": [{"date": "2023-12-01", "amount": 75000, "units": 300.0, "nav": 250.0, "type": "BUY"}], # STCG
-                "Nippon India Small Cap": [{"date": "2023-10-15", "amount": 100000, "units": 1000.0, "nav": 100.0, "type": "BUY"}] # STCG
+                # date=purchase date, nav=purchase NAV, current nav embedded via second txn as SELL dummy won't work
+                # Instead: simulate current NAV growth via a second BUY at current price (treated as mark-to-market)
+                "Mirae Asset Large Cap": [{"date": "2023-11-10", "amount": 100000, "units": 800.0, "nav": 125.0, "type": "BUY"},
+                                          {"date": "2026-03-26", "amount": 0, "units": 0, "nav": 148.5, "type": "BUY"}],
+                "HDFC Flexi Cap":        [{"date": "2023-08-15", "amount": 150000, "units": 1000.0, "nav": 150.0, "type": "BUY"},
+                                          {"date": "2026-03-26", "amount": 0, "units": 0, "nav": 183.2, "type": "BUY"}],
+                "SBI Bluechip Fund":     [{"date": "2020-04-01", "amount": 250000, "units": 2000.0, "nav": 125.0, "type": "BUY"},
+                                          {"date": "2026-03-26", "amount": 0, "units": 0, "nav": 215.0, "type": "BUY"}],
+                "Parag Parikh Flexi Cap":[{"date": "2024-01-01", "amount": 50000, "units": 500.0, "nav": 100.0, "type": "BUY"},
+                                          {"date": "2026-03-26", "amount": 0, "units": 0, "nav": 128.4, "type": "BUY"}],
+                "ICICI Pru Value Discovery":[{"date": "2023-12-01", "amount": 75000, "units": 300.0, "nav": 250.0, "type": "BUY"},
+                                             {"date": "2026-03-26", "amount": 0, "units": 0, "nav": 310.5, "type": "BUY"}],
+                "Nippon India Small Cap":[{"date": "2023-10-15", "amount": 100000, "units": 1000.0, "nav": 100.0, "type": "BUY"},
+                                          {"date": "2026-03-26", "amount": 0, "units": 0, "nav": 142.3, "type": "BUY"}]
             }
         else:
             audit_trail.append(f"ParserAgent isolated {len(funds)} distinct active mutual funds from source.")

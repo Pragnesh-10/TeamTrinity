@@ -24,9 +24,9 @@ def compute_overlap(fund_allocations, all_holdings):
     issues = []
     
     for stock, exposure in sorted(stock_exposure.items(), key=lambda x: x[1], reverse=True):
-        if exposure > 0.10:  # > 10% exposure
-            pct_str = f"{round(exposure * 100)}%"
+        if exposure > 0.05:  # > 5% exposure across portfolio
+            pct_str = f"{round(exposure * 100, 1)}%"
             high_overlap[stock] = pct_str
-            issues.append(f"High concentration risk: {pct_str} of your portfolio is exposed to {stock}.")
+            issues.append(f"Concentration risk: {pct_str} of your portfolio is exposed to {stock}.")
             
     return stock_exposure, high_overlap, issues

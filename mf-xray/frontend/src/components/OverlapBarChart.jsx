@@ -6,8 +6,10 @@ export default function OverlapBarChart({ overlap }) {
   const data = Object.keys(overlap).map(stock => ({
     name: stock.length > 15 ? stock.substring(0, 15) + '...' : stock,
     fullName: stock,
-    pct: parseFloat(overlap[stock].replace('%', ''))
-  })).sort((a, b) => b.pct - a.pct).slice(0, 10); // top 10
+    pct: typeof overlap[stock] === 'number'
+      ? parseFloat((overlap[stock] * 100).toFixed(1))
+      : parseFloat(overlap[stock].replace('%', ''))
+  })).sort((a, b) => b.pct - a.pct).slice(0, 10);
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -16,7 +18,7 @@ export default function OverlapBarChart({ overlap }) {
         <div className="bg-surface border border-border p-3 rounded-lg shadow-xl text-sm z-50">
           <p className="font-bold text-white mb-1">{data.fullName}</p>
           <p className="font-mono text-teal">Total Exposure: {data.pct}%</p>
-          {data.pct > 10 && <p className="text-xs text-red mt-1">⚠ Exceeds 10% Risk Threshold</p>}
+          {data.pct > 5 && <p className="text-xs text-red mt-1">⚠ Exceeds 5% Risk Threshold</p>}
         </div>
       );
     }
@@ -44,10 +46,10 @@ export default function OverlapBarChart({ overlap }) {
             width={120}
           />
           <Tooltip cursor={{ fill: '#1f2937' }} content={<CustomTooltip />} />
-          <ReferenceLine x={10} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: '10% Limit', fill: '#ef4444', fontSize: 10 }} />
+          <ReferenceLine x={5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: '5% Limit', fill: '#ef4444', fontSize: 10 }} />
           <Bar dataKey="pct" radius={[0, 4, 4, 0]} maxBarSize={30}>
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.pct > 10 ? '#ef4444' : '#f59e0b'} />
+              <Cell key={`cell-${index}`} fill={entry.pct > 5 ? '#ef4444' : '#f59e0b'} />
             ))}
           </Bar>
         </BarChart>
