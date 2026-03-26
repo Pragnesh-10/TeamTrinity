@@ -1,3 +1,5 @@
+const API_URL = "http://localhost:8000";
+
 export async function analyzePortfolio(file, scenario, taxRegime) {
   const formData = new FormData();
   if (file) {
