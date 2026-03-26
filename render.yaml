@@ -2,9 +2,9 @@ services:
   - type: web
     name: mfxray-backend
     env: python
-    rootDir: mf-xray/backend
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    rootDir: .
+    buildCommand: "cd mf-xray/backend && pip install -r requirements.txt"
+    startCommand: "cd mf-xray/backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.12
