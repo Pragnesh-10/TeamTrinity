@@ -55,4 +55,36 @@ class AnalysisAgent:
             "fund_count": len(parsed_funds)
         }
         
-        return summary, f"{xirr_val}%", fund_allocations
+        # Build per-fund XIRR data for XirrChart component
+        per_fund_xirr = []
+        for fund, txns in parsed_funds.items():
+            fund_cashflows = []
+            fund_units = 0.0
+            fund_nav = txns[-1].get("nav", 100.0) if txns else 100.0
+            for t in txns:
+                dt = t["date"]
+                if isinstance(dt, str):
+                    dt = datetime.strptime(dt, "%Y-%m-%d").date()
+                amt = t["amount"]
+                u = t["units"]
+                if t["type"] == "BUY":
+                    fund_cashflows.append((dt, -amt))
+                    fund_units += u
+                else:
+                    fund_cashflows.append((dt, abs(amt)))
+                    fund_units = max(0, fund_units - abs(u))
+            current_val = fund_units * fund_nav
+            if current_val > 0:
+                fund_cashflows.append((datetime.today().date(), current_val))
+            try:
+                f_xirr = calculate_xirr(fund_cashflows)
+            except Exception:
+                f_xirr = 0.0
+            per_fund_xirr.append({
+                "fund_name": fund,
+                "xirr_pct": f_xirr,
+                "current_value": round(current_val, 2)
+            })
+        
+        return summary, f"{xirr_val}%", fund_allocations, per_fund_xirr
+

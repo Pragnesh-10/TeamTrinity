@@ -44,7 +44,7 @@ class EnterpriseAgentOrchestrator:
             
         # 2. Analysis Agent
         audit_trail.append("AnalysisAgent engaged. Deploying zero-cost numpy_financial engine to precisely solve non-periodic XIRR ranges.")
-        portfolio_summary, xirr_str, fund_allocations = AnalysisAgent.analyze(funds)
+        portfolio_summary, xirr_str, fund_allocations, per_fund_xirr = AnalysisAgent.analyze(funds)
         portfolio_summary["allocations"] = fund_allocations
         
         # 3. Finance Agent
@@ -71,7 +71,8 @@ class EnterpriseAgentOrchestrator:
             "expense_loss": expense_loss,
             "tax_liability": tax_liability,
             "disclaimer": disclaimer,
-            "audit_trail": audit_trail
+            "audit_trail": audit_trail,
+            "per_fund_xirr": per_fund_xirr
         }
 
 @app.post("/analyze-portfolio")

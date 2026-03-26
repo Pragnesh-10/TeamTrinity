@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 import time
 
 def generate_report(portfolio_data):
@@ -26,25 +27,46 @@ Portfolio data:
 {json_data}
 """
     prompt = prompt_template.replace("{json_data}", json.dumps(portfolio_data, indent=2))
-    
-    url = "http://localhost:11434/api/generate"
-    payload = {
-        "model": "llama3",
-        "prompt": prompt,
-        "stream": False
-    }
-    
+
+    # Fix 3: Use Claude API (Anthropic) — reliable at hackathon demos, no local model needed
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if api_key:
+        try:
+            response = requests.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01"
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 1000,
+                    "messages": [{"role": "user", "content": prompt}]
+                },
+                timeout=30
+            )
+            report = response.json()["content"][0]["text"]
+            if report:
+                return report
+        except Exception as e:
+            print(f"Claude API error: {e}")
+
+    # Fallback: try local Ollama
     try:
-        response = requests.post(url, json=payload, timeout=30)
-        res_json = response.json()
-        report = res_json.get("response", "")
-        if not report:
-            raise Exception("Empty response from Ollama")
-        return report
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": "llama3", "prompt": prompt, "stream": False},
+            timeout=15
+        )
+        report = response.json().get("response", "")
+        if report:
+            return report
     except Exception as e:
         print(f"Ollama error: {e}")
-        # Always fallback for hackathon demos if model is not downloaded
-        return """## Portfolio X-Ray
+
+    # Final fallback — hardcoded demo report for zero-dependency hackathon demos
+    return """## Portfolio X-Ray
 
 ### 1. Portfolio Returns
 Your overall portfolio XIRR stands at **14.2% p.a.**, slightly outperforming the Nifty 50 historical average of ~13.5%. The standout performer is Mirae Asset Large Cap at 16.4%, while Parag Parikh Flexi Cap is currently lagging its category average.

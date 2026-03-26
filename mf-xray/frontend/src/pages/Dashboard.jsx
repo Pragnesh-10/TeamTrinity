@@ -1,11 +1,13 @@
 import React from 'react';
 import AllocationPieChart from '../components/AllocationPieChart';
 import OverlapBarChart from '../components/OverlapBarChart';
+import XirrChart from '../components/XirrChart';
 
 export default function Dashboard({ result, onReset }) {
   const { 
     portfolio_summary, xirr, overlap, issues_detected, 
-    recommendations, before_after, expense_loss, tax_liability, disclaimer, audit_trail 
+    recommendations, before_after, expense_loss, tax_liability, disclaimer, audit_trail,
+    per_fund_xirr
   } = result;
 
   return (
@@ -64,7 +66,15 @@ export default function Dashboard({ result, onReset }) {
         </div>
       </section>
 
-      {/* Agent Recommendations */}
+      {/* Per-Fund XIRR Chart */}
+      {per_fund_xirr && per_fund_xirr.length > 0 && (
+        <section className="bg-surface p-6 rounded-2xl border border-border">
+          <h3 className="text-xl font-bold mb-6">Per-Fund XIRR Breakdown</h3>
+          <XirrChart data={per_fund_xirr} />
+        </section>
+      )}
+
+
       <section className="bg-surface p-6 rounded-2xl border border-border">
         <div className="flex justify-between items-start mb-6">
           <h3 className="text-2xl font-bold flex items-center gap-3">

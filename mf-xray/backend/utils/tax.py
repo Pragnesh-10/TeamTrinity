@@ -7,6 +7,7 @@ def calculate_tax_liability(parsed_funds, tax_regime="New Tax Regime"):
     """
     total_stcg = 0.0
     total_ltcg = 0.0
+    total_ltcg_gain = 0.0  # raw gain before tax, needed for correct exemption calc
     today = datetime.today().date()
     
     for fund, txns in parsed_funds.items():
@@ -44,15 +45,16 @@ def calculate_tax_liability(parsed_funds, tax_regime="New Tax Regime"):
                 if holding_days < 365:
                     total_stcg += unrealized_gain * 0.20
                 else:
+                    total_ltcg_gain += unrealized_gain
                     total_ltcg += unrealized_gain * 0.125
                     
-    # Regime Logic Edge Case
+    # Regime Logic Edge Case — apply exemption to the GAIN, then compute tax
     ltcg_exemption = 125000 if "Old" in tax_regime else 0
-    adjusted_ltcg = max(0, total_ltcg - (ltcg_exemption * 0.125))
+    adjusted_ltcg_tax = max(0, (total_ltcg_gain - ltcg_exemption)) * 0.125
 
     return {
         "stcg_liability": round(total_stcg, 2),
-        "ltcg_liability": round(adjusted_ltcg, 2),
-        "total_tax_drag": round(total_stcg + adjusted_ltcg, 2),
-        "regime_notes": f"Applied {tax_regime} rules. {'1.25L LTCG Exemption factored.' if 'Old' in tax_regime else 'Standard LTCG rules applied.'}"
+        "ltcg_liability": round(adjusted_ltcg_tax, 2),
+        "total_tax_drag": round(total_stcg + adjusted_ltcg_tax, 2),
+        "regime_notes": f"Applied {tax_regime} rules. {'1.25L LTCG Exemption applied to gain before tax calc.' if 'Old' in tax_regime else 'Standard LTCG 12.5% rules applied.'}"
     }

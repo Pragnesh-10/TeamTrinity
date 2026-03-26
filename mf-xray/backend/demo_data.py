@@ -1,44 +1,44 @@
 DEMO_HOLDINGS = {
     "Mirae Asset Large Cap": {
-        "Reliance Industries": 9.5,
-        "HDFC Bank": 8.0,
-        "Infosys": 7.2,
-        "ICICI Bank": 6.1,
-        "TCS": 5.0
+        "Reliance Industries": 0.095,
+        "HDFC Bank": 0.080,
+        "Infosys": 0.072,
+        "ICICI Bank": 0.061,
+        "TCS": 0.050
     },
     "HDFC Flexi Cap": {
-        "HDFC Bank": 9.2,
-        "Reliance Industries": 8.1,
-        "Infosys": 6.8,
-        "L&T": 4.5,
-        "SBI": 4.0
+        "HDFC Bank": 0.092,
+        "Reliance Industries": 0.081,
+        "Infosys": 0.068,
+        "L&T": 0.045,
+        "SBI": 0.040
     },
     "Parag Parikh Flexi Cap": {
-        "Bajaj Finance": 7.0,
-        "ITC": 6.5,
-        "HDFC Bank": 6.0,
-        "Alphabet Inc": 5.5,
-        "Microsoft": 5.0
+        "Bajaj Finance": 0.070,
+        "ITC": 0.065,
+        "HDFC Bank": 0.060,
+        "Alphabet Inc": 0.055,
+        "Microsoft": 0.050
     },
     "SBI Bluechip Fund": {
-        "Reliance Industries": 8.8,
-        "HDFC Bank": 8.5,
-        "Infosys": 7.5,
-        "L&T": 5.5,
-        "ITC": 4.8
+        "Reliance Industries": 0.088,
+        "HDFC Bank": 0.085,
+        "Infosys": 0.075,
+        "L&T": 0.055,
+        "ITC": 0.048
     },
     "ICICI Pru Value Discovery": {
-        "NTPC": 8.0,
-        "Sun Pharma": 7.2,
-        "Bharti Airtel": 6.5,
-        "HDFC Bank": 5.0,
-        "Reliance Industries": 4.5
+        "NTPC": 0.080,
+        "Sun Pharma": 0.072,
+        "Bharti Airtel": 0.065,
+        "HDFC Bank": 0.050,
+        "Reliance Industries": 0.045
     },
     "Nippon India Small Cap": {
-        "Tube Investments": 3.5,
-        "HDFC Bank": 1.2, # incidental
-        "KPIT Tech": 2.8,
-        "Poonawalla Fincorp": 2.5,
-        "NIIT Learning": 2.2
+        "Tube Investments": 0.035,
+        "HDFC Bank": 0.012,
+        "KPIT Tech": 0.028,
+        "Poonawalla Fincorp": 0.025,
+        "NIIT Learning": 0.022
     }
 }

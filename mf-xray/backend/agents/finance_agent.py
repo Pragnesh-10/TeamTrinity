@@ -12,9 +12,10 @@ class FinanceAgent:
         """
         matched_holdings = {}
         demo_keys = list(DEMO_HOLDINGS.keys())
-        for i, fund in enumerate(fund_allocations.keys()):
-            # deterministic fallback
-            matched_holdings[fund] = DEMO_HOLDINGS[demo_keys[i % len(demo_keys)]]
+        from difflib import get_close_matches
+        for fund in fund_allocations.keys():
+            match = get_close_matches(fund, demo_keys, n=1, cutoff=0.3)
+            matched_holdings[fund] = DEMO_HOLDINGS[match[0]] if match else DEMO_HOLDINGS[demo_keys[0]]
             
         stock_exposure, high_overlap, issues = compute_overlap(fund_allocations, matched_holdings)
         
