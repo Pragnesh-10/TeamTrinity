@@ -1,41 +1,8 @@
 from utils.overlap import compute_overlap
 from utils.expense import calculate_expense_drag
 from utils.tax import calculate_tax_liability
-from demo_data import DEMO_HOLDINGS
+from holdings_service import get_holdings_service
 
-# Keyword → demo fund mapping (handles real CAMS fund name variations)
-KEYWORD_MAP = {
-    "mirae":        "Mirae Asset Large Cap",
-    "hdfc":         "HDFC Flexi Cap",
-    "parag":        "Parag Parikh Flexi Cap",
-    "ppfas":        "Parag Parikh Flexi Cap",
-    "sbi":          "SBI Bluechip Fund",
-    "bluechip":     "SBI Bluechip Fund",
-    "icici":        "ICICI Pru Value Discovery",
-    "value":        "ICICI Pru Value Discovery",
-    "nippon":       "Nippon India Small Cap",
-    "small cap":    "Nippon India Small Cap",
-    "smallcap":     "Nippon India Small Cap",
-    "axis":         "Mirae Asset Large Cap",
-    "kotak":        "HDFC Flexi Cap",
-    "motilal":      "Parag Parikh Flexi Cap",
-    "franklin":     "SBI Bluechip Fund",
-    "aditya":       "ICICI Pru Value Discovery",
-    "uti":          "Nippon India Small Cap",
-    "tata":         "Mirae Asset Large Cap",
-    "dsp":          "HDFC Flexi Cap",
-}
-
-def match_fund_to_demo(fund_name: str) -> dict:
-    """
-    Match a real CAMS fund name to the closest demo holdings via keyword lookup.
-    Falls back to cycling through demo keys to ensure diverse holdings.
-    """
-    lowered = fund_name.lower()
-    for keyword, demo_key in KEYWORD_MAP.items():
-        if keyword in lowered:
-            return DEMO_HOLDINGS[demo_key]
-    return None  # will be handled by cycling fallback
 
 class FinanceAgent:
     @staticmethod
@@ -44,16 +11,28 @@ class FinanceAgent:
         Uses allocation dict.
         Returns stock_exposure dict, high_overlap dict, issues[] array, expense_loss string, and tax dict.
         """
+        holdings_service = get_holdings_service()
         matched_holdings = {}
-        demo_keys = list(DEMO_HOLDINGS.keys())
-        unmatched_idx = 0  # cycle index for funds that don't match any keyword
 
         for fund in fund_allocations.keys():
-            holdings = match_fund_to_demo(fund)
+            # Get ISIN from parsed_funds if available
+            fund_data = parsed_funds.get(fund, {})
+            isin = None
+            if isinstance(fund_data, dict):
+                isin = fund_data.get("isin")
+
+            # Try ISIN lookup first, then fuzzy name match, then fallback
+            holdings = None
+            if isin:
+                holdings = holdings_service.get_holdings_by_isin(isin)
+
             if holdings is None:
-                # Cycle through demo keys so each unmatched fund gets DIFFERENT holdings
-                holdings = DEMO_HOLDINGS[demo_keys[unmatched_idx % len(demo_keys)]]
-                unmatched_idx += 1
+                holdings = holdings_service.get_holdings_by_name(fund)
+
+            if holdings is None:
+                # Fallback: treat as single-asset exposure (no fake stocks)
+                holdings = {fund: 1.0}
+
             matched_holdings[fund] = holdings
 
         stock_exposure, high_overlap, issues = compute_overlap(fund_allocations, matched_holdings)

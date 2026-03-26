@@ -39,32 +39,38 @@ def parse_pdf(file_path):
                         date_str = match_summary.group(1)
                         try:
                             txn_date = datetime.strptime(date_str, "%d-%b-%Y").date()
-                            
+
                             # Extract numbers before date (Cost Value, Unit Balance)
                             parts = line.split(date_str)
                             name_part = parts[0].strip()
-                            
+
+                            # Extract ISIN before removing it (format: INF followed by 9-12 alphanumeric chars)
+                            isin_match = re.match(r'^(INF[A-Z0-9]{9,12})(?:/\S+)?\s+', name_part)
+                            extracted_isin = isin_match.group(1) if isin_match else None
+
                             # Remove Folio/ISIN at start
                             name_part = re.sub(r'^\S+(/\S+)?\s+', '', name_part)
-                            
+
                             nums_before = re.findall(r'(?<!\S)[\d,]+\.\d+(?!\S)', name_part)
                             fund_name = name_part
                             for n in nums_before:
                                 fund_name = fund_name.replace(n, '').strip()
-                                
+
                             fund_name = re.sub(r'[^a-zA-Z0-9 &\-]', '', fund_name).strip()
-                            
+
                             if len(nums_before) >= 2 and fund_name:
                                 amount = float(nums_before[-2].replace(',', ''))
                                 units = float(nums_before[-1].replace(',', ''))
-                                
+
                                 nums_after = re.findall(r'[\d,]+\.\d+', parts[1])
                                 nav = float(nums_after[0].replace(',', '')) if nums_after else (amount/units if units>0 else 100.0)
-                                
+
                                 if amount > 0 and units > 0:
                                     if fund_name not in funds:
-                                        funds[fund_name] = []
-                                    funds[fund_name].append({
+                                        funds[fund_name] = {"isin": extracted_isin, "transactions": []}
+                                    elif extracted_isin and not funds[fund_name].get("isin"):
+                                        funds[fund_name]["isin"] = extracted_isin
+                                    funds[fund_name]["transactions"].append({
                                         "date": txn_date,
                                         "amount": amount,
                                         "units": units,
@@ -84,10 +90,10 @@ def parse_pdf(file_path):
                             current_fund = line.split("Folio No")[0].strip()
                         else:
                             current_fund = line
-                            
+
                         current_fund = re.sub(r'[^a-zA-Z0-9 &\-]', '', current_fund).strip()
                         if current_fund and current_fund not in funds:
-                            funds[current_fund] = []
+                            funds[current_fund] = {"isin": None, "transactions": []}
                         continue
                     
                     # 3. Detailed format - transaction line
@@ -129,7 +135,9 @@ def parse_pdf(file_path):
                                 units = -abs(units)
                                 
                             if amount != 0 and units != 0:
-                                funds[current_fund].append({
+                                if current_fund not in funds:
+                                    funds[current_fund] = {"isin": None, "transactions": []}
+                                funds[current_fund]["transactions"].append({
                                     "date": txn_date,
                                     "amount": amount,
                                     "units": units,
@@ -138,7 +146,7 @@ def parse_pdf(file_path):
                                 })
                                 
         # Add next line details if fund_name spans multiple lines (simplified logic above)
-        filtered_funds = {k: v for k, v in funds.items() if len(v) > 0}
+        filtered_funds = {k: v for k, v in funds.items() if len(v.get("transactions", [])) > 0}
         
         return {"status": "success", "funds": filtered_funds}
     except Exception as e:

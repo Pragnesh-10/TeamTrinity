@@ -103,7 +103,7 @@ def run_pipeline(job_id, is_demo, file_path=None):
             update_job_status(job_id, 6, "Analysis Complete", 100, {"status": "complete", "llm_report": llm_report})
 
         else:
-            # REAL PDF PARSING LOGIC
+            
             from parser import parse_pdf
             update_job_status(job_id, 1, "Parsing PDF and extracting transactions...", 10)
             parse_res = parse_pdf(file_path)
@@ -130,7 +130,7 @@ def run_pipeline(job_id, is_demo, file_path=None):
                 units_held = 0.0
                 lots = []
                 
-                # Sort transactions by date
+               
                 txns.sort(key=lambda x: x["date"])
                 
                 current_nav = txns[-1].get("nav", 100.0) if txns else 100.0

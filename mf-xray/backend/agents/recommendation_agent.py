@@ -36,15 +36,23 @@ class RecommendationAgent:
         # Get scenario config, default to wealth growth
         cfg = SCENARIO_CONFIG.get(scenario, SCENARIO_CONFIG["Long-Term Wealth Growth"])
 
-        if len(issues) > 0 and stock_exposure:
+        if fund_allocations and stock_exposure:
             worst_stock = max(stock_exposure.items(), key=lambda x: x[1])[0]
             max_pct = round(max(stock_exposure.values()) * 100)
+            new_val = max(max_pct - 15, 0) if max_pct > 15 else max(0, max_pct - 5)
+            new_val = max(max_pct - 15, 0) if max_pct > 15 else max(0, max_pct - 5)
 
             # Find oldest fund (most tax-efficient to sell — avoids STCG)
             target_sell_fund = None
             oldest_date = datetime.today().date()
             if parsed_funds:
-                for fund, txns in parsed_funds.items():
+                for fund, fund_data in parsed_funds.items():
+                    # Support both old format (list) and new format (dict with transactions)
+                    if isinstance(fund_data, dict):
+                        txns = fund_data.get("transactions", [])
+                    else:
+                        txns = fund_data
+
                     if not txns:
                         continue
                     tx_dt = txns[0]["date"]
@@ -74,7 +82,7 @@ class RecommendationAgent:
                     f"For your '{scenario}' goal ({cfg['horizon']} horizon), {cfg['risk_note']} "
                     f"Selling {target_sell_fund} is the most tax-efficient choice: {tax_note}"
                 ),
-                "impact": f"Drops portfolio overlap from {max_pct}% to {max(max_pct - 15, 10)}% without triggering short-term capital gains.",
+                "impact": f"Drops/maintains portfolio overlap from {max_pct}% to {new_val}% without triggering short-term capital gains.",
                 "literacy_insight": cfg["literacy"]
             })
 
@@ -93,7 +101,8 @@ class RecommendationAgent:
             })
 
             before_after["overlap_before"] = f"{max_pct}%"
-            before_after["overlap_after"] = f"{max(max_pct - 15, 10)}%"
+            new_val = max(max_pct - 15, 0) if max_pct > 15 else max(0, max_pct - 5)
+            before_after["overlap_after"] = f"{new_val}%"
 
         else:
             recommendations.append({

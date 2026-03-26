@@ -23,7 +23,7 @@ class EnterpriseAgentOrchestrator:
     async def run(target_data, scenario, tax_regime):
         audit_trail = []
         
-        # 1. Parser Agent
+        
         audit_trail.append(f"ParserAgent initialized. Received payload. Attempting data synthesis...")
         parse_result = await ParserAgent.parse(target_data)
             

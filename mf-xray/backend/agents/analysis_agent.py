@@ -12,8 +12,14 @@ class AnalysisAgent:
         total_current_value = 0.0
         fund_allocations = {}
         portfolio_cashflows = []
-        
-        for fund, txns in parsed_funds.items():
+
+        for fund, fund_data in parsed_funds.items():
+            # Support both old format (list) and new format (dict with transactions)
+            if isinstance(fund_data, dict):
+                txns = fund_data.get("transactions", [])
+            else:
+                txns = fund_data
+
             txns.sort(key=lambda x: x["date"] if isinstance(x["date"], str) else x["date"].strftime("%Y-%m-%d"))
             current_nav = txns[-1].get("nav", 100.0) if txns else 100.0
             invested_in_fund = 0.0
@@ -57,7 +63,13 @@ class AnalysisAgent:
         
         # Build per-fund XIRR data for XirrChart component
         per_fund_xirr = []
-        for fund, txns in parsed_funds.items():
+        for fund, fund_data in parsed_funds.items():
+            # Support both old format (list) and new format (dict with transactions)
+            if isinstance(fund_data, dict):
+                txns = fund_data.get("transactions", [])
+            else:
+                txns = fund_data
+
             fund_cashflows = []
             fund_units = 0.0
             fund_nav = txns[-1].get("nav", 100.0) if txns else 100.0
@@ -74,8 +86,7 @@ class AnalysisAgent:
                     fund_cashflows.append((dt, abs(amt)))
                     fund_units = max(0, fund_units - abs(u))
             current_val = fund_units * fund_nav
-            if current_val > 0:
-                fund_cashflows.append((datetime.today().date(), current_val))
+            fund_cashflows.append((datetime.today().date(), current_val))
             try:
                 f_xirr = calculate_xirr(fund_cashflows)
             except Exception:

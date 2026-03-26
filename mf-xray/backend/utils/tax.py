@@ -9,8 +9,14 @@ def calculate_tax_liability(parsed_funds, tax_regime="New Tax Regime"):
     total_ltcg = 0.0
     total_ltcg_gain = 0.0  # raw gain before tax, needed for correct exemption calc
     today = datetime.today().date()
-    
-    for fund, txns in parsed_funds.items():
+
+    for fund, fund_data in parsed_funds.items():
+        # Support both old format (list) and new format (dict with transactions)
+        if isinstance(fund_data, dict):
+            txns = fund_data.get("transactions", [])
+        else:
+            txns = fund_data
+
         transactions = sorted(txns, key=lambda x: x["date"] if isinstance(x["date"], str) else x["date"].strftime("%Y-%m-%d"))
         
         buy_lots = []

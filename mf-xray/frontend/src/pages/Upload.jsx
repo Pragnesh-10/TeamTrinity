@@ -82,9 +82,9 @@ export default function Upload({ onResultReady }) {
                 onChange={(e) => setScenario(e.target.value)}
                 className="w-full bg-surface border border-border p-4 rounded-xl text-white outline-none focus:border-teal transition-colors"
               >
-                <option value="Long-Term Wealth Growth">🚀 Long-Term Wealth (&gt;10y)</option>
-                <option value="Retirement Transition">👴 Retirement Transition (&lt;3y)</option>
-                <option value="House Downpayment">🏠 House Downpayment (Short)</option>
+                <option value="Long-Term Wealth Growth"> Long-Term Wealth (&gt;10y)</option>
+                <option value="Retirement Transition"> Retirement Transition (&lt;3y)</option>
+                <option value="House Downpayment"> House Downpayment (Short)</option>
               </select>
             </div>
             <div>

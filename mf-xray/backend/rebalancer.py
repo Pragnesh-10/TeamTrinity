@@ -9,7 +9,7 @@ def compute_rebalancing_actions(fund_positions, stcg_tolerance=5000):
     actions = []
     total_stcg_tax = 0.0
     
-    # Calculate difference
+    
     total_value = sum(f["current_value"] for f in fund_positions)
     funds_to_sell = []
     funds_to_buy = []
@@ -35,7 +35,7 @@ def compute_rebalancing_actions(fund_positions, stcg_tolerance=5000):
                 "amount_to_buy": -diff
             })
             
-    # Process Sells
+    
     for sell in funds_to_sell:
         units_to_sell = sell["amount_to_sell"] / sell["current_nav"]
         units_remaining = units_to_sell
