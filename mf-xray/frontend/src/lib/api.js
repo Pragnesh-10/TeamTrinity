@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000";
+const API_URL = "https://mfxray-backend-xyz.onrender.com";
 
 export async function analyzePortfolio(file, scenario, taxRegime) {
   const formData = new FormData();
