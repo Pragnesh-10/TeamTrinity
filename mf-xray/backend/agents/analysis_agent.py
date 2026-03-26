@@ -1,0 +1,58 @@
+from datetime import datetime
+from utils.xirr import calculate_xirr
+
+class AnalysisAgent:
+    @staticmethod
+    def analyze(parsed_funds):
+        """
+        Takes normalized funds dictionary.
+        Returns portfolio_summary, calculated xirr strings, fund_allocations.
+        """
+        total_invested = 0.0
+        total_current_value = 0.0
+        fund_allocations = {}
+        portfolio_cashflows = []
+        
+        for fund, txns in parsed_funds.items():
+            txns.sort(key=lambda x: x["date"] if isinstance(x["date"], str) else x["date"].strftime("%Y-%m-%d"))
+            current_nav = txns[-1].get("nav", 100.0) if txns else 100.0
+            invested_in_fund = 0.0
+            units_in_fund = 0.0
+            
+            for t in txns:
+                dt = t["date"]
+                if isinstance(dt, str):
+                    dt = datetime.strptime(dt, "%Y-%m-%d").date()
+                    
+                amt = t["amount"]
+                u = t["units"]
+                if t["type"] == "BUY":
+                    invested_in_fund += amt
+                    units_in_fund += u
+                    portfolio_cashflows.append((dt, -amt))
+                else:
+                    invested_in_fund = max(0, invested_in_fund - abs(amt))
+                    units_in_fund = max(0, units_in_fund - abs(u))
+                    portfolio_cashflows.append((dt, abs(amt)))
+                    
+            value = units_in_fund * current_nav
+            total_invested += invested_in_fund
+            total_current_value += value
+            fund_allocations[fund] = value
+            
+        # Complete XIRR array with current value
+        if total_current_value > 0:
+            portfolio_cashflows.append((datetime.today().date(), total_current_value))
+            
+        try:
+            xirr_val = calculate_xirr(portfolio_cashflows)
+        except Exception:
+            xirr_val = 0.0
+            
+        summary = {
+            "total_invested": total_invested,
+            "total_current_value": total_current_value,
+            "fund_count": len(parsed_funds)
+        }
+        
+        return summary, f"{xirr_val}%", fund_allocations

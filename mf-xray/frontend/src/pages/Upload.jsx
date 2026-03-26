@@ -1,77 +1,40 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Upload as UploadIcon, FileText, Play } from 'lucide-react';
-import { triggerDemo, getStatus, getResult, uploadPdf } from '../lib/api';
-import ProgressTracker from '../components/ProgressTracker';
+import React, { useState, useRef } from 'react';
+import { Upload as UploadIcon, Play } from 'lucide-react';
+import { analyzePortfolio } from '../lib/api';
 
-export default function Upload({ onJobComplete, onResultReady }) {
-  const [jobId, setJobId] = useState(null);
-  const [status, setStatus] = useState(null);
+export default function Upload({ onResultReady }) {
+  const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [scenario, setScenario] = useState("Long-Term Wealth Growth");
+  const [taxRegime, setTaxRegime] = useState("New Tax Regime");
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    let intervalId;
-    if (jobId) {
-      intervalId = setInterval(async () => {
-        try {
-          const res = await getStatus(jobId);
-          if (res.error) return;
-          setStatus(res);
-          
-          if (res.step >= 6 || res.progress >= 100) {
-            clearInterval(intervalId);
-            const result = await getResult(jobId);
-            onResultReady(result);
-          } else if (res.step === -1) {
-            clearInterval(intervalId);
-            alert("Pipeline error: " + res.label);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }, 1000);
-    }
-    return () => clearInterval(intervalId);
-  }, [jobId, onResultReady]);
-
   const handleDemoClick = async () => {
+    setLoading(true);
     try {
-      const { job_id } = await triggerDemo();
-      setJobId(job_id);
-      onJobComplete(job_id);
+      const result = await analyzePortfolio(null, scenario, taxRegime);
+      if (result.detail) alert(result.detail);
+      else onResultReady(result);
     } catch (e) {
       console.error(e);
-      alert("Backend not responding. Is it running?");
+      alert("Error connecting to AI agents.");
     }
+    setLoading(false);
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setLoading(true);
     try {
-      const { job_id } = await uploadPdf(file);
-      setJobId(job_id);
-      onJobComplete(job_id);
+      const result = await analyzePortfolio(file, scenario, taxRegime);
+      if (result.detail) alert(result.detail);
+      else onResultReady(result);
     } catch (e) {
       console.error(e);
-      alert("Error uploading file.");
+      alert("Pipeline error.");
     }
-  };
-
-  const triggerFileSelect = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
+    setLoading(false);
   };
 
   const handleDrop = async (e) => {
@@ -79,38 +42,70 @@ export default function Upload({ onJobComplete, onResultReady }) {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (!file) return;
+    setLoading(true);
     try {
-      const { job_id } = await uploadPdf(file);
-      setJobId(job_id);
-      onJobComplete(job_id);
+      const result = await analyzePortfolio(file, scenario, taxRegime);
+      if (result.detail) alert(result.detail);
+      else onResultReady(result);
     } catch (err) {
       console.error(err);
       alert("Error uploading file.");
     }
+    setLoading(false);
+  };
+
+  const triggerFileSelect = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="max-w-3xl w-full text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-          MF Portfolio <span className="text-teal text-transparent bg-clip-text bg-gradient-to-r from-teal to-blue-400">X-Ray</span>
+          MF Portfolio <span className="text-teal text-transparent bg-clip-text bg-gradient-to-r from-teal to-blue-400">X-Ray Agent</span>
         </h1>
-        <p className="text-lg text-gray-400">Autonomous analysis of your CAMS or KFintech statements.</p>
+        <p className="text-lg text-gray-400">Multi-Agent System for Autonomous Financial Planning</p>
       </div>
 
-      {!jobId ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center space-y-6">
+          <div className="w-12 h-12 border-4 border-teal border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-teal animate-pulse font-mono">Agents are analyzing your portfolio...</p>
+        </div>
+      ) : (
         <div className="w-full max-w-xl">
-          <input 
-            type="file" 
-            accept=".pdf" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-          />
-          <div 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 text-left">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">Life Scenario Edge Case</label>
+              <select 
+                value={scenario}
+                onChange={(e) => setScenario(e.target.value)}
+                className="w-full bg-surface border border-border p-4 rounded-xl text-white outline-none focus:border-teal transition-colors"
+              >
+                <option value="Long-Term Wealth Growth">🚀 Long-Term Wealth (&gt;10y)</option>
+                <option value="Retirement Transition">👴 Retirement Transition (&lt;3y)</option>
+                <option value="House Downpayment">🏠 House Downpayment (Short)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">Base Tax Regime</label>
+              <select 
+                value={taxRegime}
+                onChange={(e) => setTaxRegime(e.target.value)}
+                className="w-full bg-surface border border-border p-4 rounded-xl text-white outline-none focus:border-teal transition-colors"
+              >
+                <option value="New Tax Regime">New Tax Regime (Default)</option>
+                <option value="Old Tax Regime">Old Tax Regime (Section 80C limits)</option>
+              </select>
+            </div>
+          </div>
+
+          <input type="file" accept=".pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+          
+          <div  
             onClick={triggerFileSelect}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
             onDrop={handleDrop}
             className={`border-2 border-dashed hover:border-teal/50 transition-colors bg-surface rounded-2xl p-12 text-center flex flex-col items-center justify-center cursor-pointer group ${isDragging ? 'border-teal bg-teal/5' : 'border-border'}`}
           >
@@ -119,17 +114,14 @@ export default function Upload({ onJobComplete, onResultReady }) {
             </div>
             <h3 className="text-xl font-medium mb-2">Drag & Drop your CAS PDF</h3>
             <p className="text-gray-400 text-sm mb-6">Supports .pdf formats up to 10MB</p>
-            <button 
-              onClick={(e) => { e.stopPropagation(); triggerFileSelect(); }}
-              className="bg-white text-black px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors"
-            >
+            <button className="bg-white text-black px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors">
               Select File
             </button>
           </div>
 
           <div className="flex items-center gap-4 my-8">
             <div className="h-px bg-border flex-1"></div>
-            <span className="text-sm text-gray-500 font-mono uppercase">Or try the</span>
+            <span className="text-sm text-gray-500 font-mono uppercase">Or</span>
             <div className="h-px bg-border flex-1"></div>
           </div>
 
@@ -138,26 +130,10 @@ export default function Upload({ onJobComplete, onResultReady }) {
             className="w-full flex items-center justify-center gap-3 bg-surface hover:bg-border border border-border p-4 rounded-xl transition-all"
           >
             <Play className="w-5 h-5 text-amber" />
-            <span className="font-medium">Run Built-in Demo Data</span>
+            <span className="font-medium">Run Multi-Agent Demo Simulation</span>
           </button>
         </div>
-      ) : (
-        <ProgressTracker 
-          currentStep={status?.step || 1} 
-          label={status?.label || 'Initializing...'} 
-          progress={status?.progress || 0} 
-        />
       )}
-
-      <div className="mt-auto pt-16">
-        <div className="border border-amber/30 bg-amber/5 px-6 py-4 rounded-lg flex items-start gap-4 text-amber max-w-4xl text-sm">
-          <span className="text-xl">⚠</span>
-          <p>
-            This is AI-generated analysis for informational purposes only and does not constitute SEBI-registered investment advice. 
-            Please consult a SEBI-registered investment advisor before making investment decisions.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
