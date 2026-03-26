@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pdfplumber
+scipy
+numpy
+pandas
+python-multipart
+requests
