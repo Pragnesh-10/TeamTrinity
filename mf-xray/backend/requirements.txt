@@ -8,3 +8,8 @@ python-multipart
 requests
 numpy-financial
 gunicorn
+pydantic>=2.0
+pyxirr
+ollama
+slowapi
+redis

@@ -1,4 +1,4 @@
-const API_URL = "https://teamtrinity.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://teamtrinity.onrender.com";
 
 export async function analyzePortfolio(file, scenario, taxRegime) {
   const formData = new FormData();

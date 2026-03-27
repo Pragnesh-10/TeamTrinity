@@ -1,13 +1,20 @@
 import json
 import uuid
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from models.schemas import ChatMessage, ConversationState
 from agents.orchestrator import MasterConcierge
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="AI Money Mentor Multi-Agent API", version="2.0")
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Security and CORS
 app.add_middleware(
@@ -26,14 +33,16 @@ async def health_check():
 
 
 @app.post("/session")
-async def create_session():
+@limiter.limit("10/minute")
+async def create_session(request: Request):
     """Create a new conversation session and return the session ID."""
     state = MasterConcierge.create_session()
     return {"session_id": state.session_id, "status": "created"}
 
 
 @app.get("/session/{session_id}")
-async def get_session(session_id: str):
+@limiter.limit("10/minute")
+async def get_session(request: Request, session_id: str):
     """Retrieve full session state for debugging/UI sync."""
     state = MasterConcierge.get_session(session_id)
     if not state:
@@ -42,7 +51,8 @@ async def get_session(session_id: str):
 
 
 @app.post("/chat")
-async def chat(chat_message: ChatMessage):
+@limiter.limit("10/minute")
+async def chat(request: Request, chat_message: ChatMessage):
     """Text-based chat endpoint for conversational routing."""
     response = await MasterConcierge.process_chat(
         session_id=chat_message.session_id,
@@ -52,7 +62,9 @@ async def chat(chat_message: ChatMessage):
 
 
 @app.post("/upload")
+@limiter.limit("5/minute")
 async def upload_portfolio(
+    request: Request,
     session_id: str = Form(...),
     file: UploadFile = File(None),
     payload: str = Form(None),
@@ -80,7 +92,9 @@ async def upload_portfolio(
 # ─── Legacy Support ─────────────────────────────────────────────────────────
 
 @app.post("/analyze-portfolio")
+@limiter.limit("5/minute")
 async def legacy_analyze_portfolio(
+    request: Request,
     file: UploadFile = File(None), 
     payload: str = Form(None), 
     scenario: str = Form("Long-Term Wealth Growth"), 

@@ -20,35 +20,66 @@ from models.schemas import (
 from agents.xray_agent import XRayAgent
 from agents.fire_planner_agent import FIREPlannerAgent
 
-# In-memory store (in production, use Redis or Postgres)
+import os
+import redis
+import json
+
+# In-memory store fallback
 _SESSIONS: dict[str, ConversationState] = {}
 
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
+try:
+    redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+    redis_client.ping()
+except Exception:
+    redis_client = None
 
 class MasterConcierge:
     """The central routing agent."""
 
     @staticmethod
+    def save_session(state: ConversationState) -> None:
+        """Save session to Redis if available, else in-memory dict."""
+        if redis_client:
+            redis_client.setex(
+                f"session:{state.session_id}",
+                MAX_SESSION_AGE_SECONDS,
+                state.model_dump_json()
+            )
+        else:
+            _SESSIONS[state.session_id] = state
+
+    @staticmethod
     def create_session() -> ConversationState:
         """Create and store a new conversation session."""
-        MasterConcierge._cleanup_expired_sessions()
+        if not redis_client:
+            MasterConcierge._cleanup_expired_sessions()
         state = ConversationState()
-        _SESSIONS[state.session_id] = state
+        MasterConcierge.save_session(state)
         return state
 
     @staticmethod
     def get_session(session_id: str) -> Optional[ConversationState]:
         """Retrieve an existing session."""
+        if redis_client:
+            data = redis_client.get(f"session:{session_id}")
+            if data:
+                return ConversationState.model_validate_json(data)
+            return None
         return _SESSIONS.get(session_id)
 
     @staticmethod
     def delete_session(session_id: str) -> None:
         """Delete a session."""
-        _SESSIONS.pop(session_id, None)
+        if redis_client:
+            redis_client.delete(f"session:{session_id}")
+        else:
+            _SESSIONS.pop(session_id, None)
 
     @staticmethod
     async def process_chat(session_id: str, message: str) -> ChatResponse:
         """Handle incoming text message and route to appropriate agent using Ollama."""
-        state = _SESSIONS.get(session_id)
+        state = MasterConcierge.get_session(session_id)
         if not state:
             return ChatResponse(
                 session_id=session_id,
@@ -149,11 +180,13 @@ class MasterConcierge:
             err_msg = f"An error occurred: {str(e)}"
             _append_history(state, err_msg)
             return ChatResponse(session_id=session_id, message=err_msg)
+        finally:
+            MasterConcierge.save_session(state)
 
     @staticmethod
     async def process_portfolio_upload(session_id: str, payload: dict) -> ChatResponse:
         """Route portfolio upload directly to XRay Agent and handle proactive FIRE offer."""
-        state = _SESSIONS.get(session_id)
+        state = MasterConcierge.get_session(session_id)
         if not state:
             return ChatResponse(session_id=session_id, message="Session expired. Please restart.")
 
@@ -196,6 +229,8 @@ class MasterConcierge:
             err_msg = f"X-Ray analysis failed: {str(e)}"
             _append_history(state, err_msg)
             return ChatResponse(session_id=session_id, agent="xray", message=err_msg)
+        finally:
+            MasterConcierge.save_session(state)
 
     @staticmethod
     def _cleanup_expired_sessions():
@@ -258,7 +293,8 @@ def _regex_fallback_parser(text: str) -> OllamaIntentExtraction:
     # 1. Affirmative check
     affirmative_words = {"yes", "yeah", "yep", "sure", "ok", "okay", "absolutely", "do it"}
     text_clean = re.sub(r'[^a-zA-Z\s]', '', msg_lower).strip()
-    if any(word in text_clean for word in affirmative_words):
+    # Check if any affirmative word is exactly a word in the text (don't match 'ok' in 'broken')
+    if any(word in text_clean.split() for word in affirmative_words):
         intent = "affirmative"
 
     # 2. Details check
