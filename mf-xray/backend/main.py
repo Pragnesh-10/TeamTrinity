@@ -7,7 +7,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from models.schemas import ChatMessage, ConversationState
+from models.schemas import ChatMessage, ConversationState, FIREInput
 from agents.orchestrator import MasterConcierge
 
 limiter = Limiter(key_func=get_remote_address)
@@ -59,6 +59,23 @@ async def chat(request: Request, chat_message: ChatMessage):
         message=chat_message.message,
     )
     return response.model_dump()
+
+
+@app.post("/fire/plan")
+@limiter.limit("10/minute")
+async def fire_plan(request: Request, payload: FIREInput):
+    """
+    Compute a detailed FIRE plan for a user.
+
+    Returns:
+    - Core FIRE metrics (corpus, SIP, feasibility)
+    - Month-by-month corpus trajectory
+    - Insurance gap analysis
+    """
+    from finance.fire_engine import build_fire_plan
+
+    plan = build_fire_plan(payload)
+    return plan.model_dump()
 
 
 @app.post("/upload")

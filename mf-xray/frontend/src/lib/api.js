@@ -19,3 +19,20 @@ export async function analyzePortfolio(file, scenario, taxRegime) {
   
   return res.json();
 }
+
+export async function getFirePlan(input) {
+  const res = await fetch(`${API_URL}/fire/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || "Failed to compute FIRE plan");
+  }
+
+  return res.json();
+}

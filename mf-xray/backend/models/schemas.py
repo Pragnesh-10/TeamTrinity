@@ -84,6 +84,38 @@ class FIREInput(BaseModel):
     existing_investments: Optional[float] = Field(None, ge=0, description="Current total investment corpus")
     expected_return: Optional[float] = Field(None, description="Expected annual return (decimal)")
     inflation_rate: Optional[float] = Field(None, description="Expected inflation rate (decimal)")
+    equity_allocation_start: Optional[float] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Equity allocation at current age (0-1).",
+    )
+    equity_allocation_end: Optional[float] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Equity allocation at retirement age (0-1).",
+    )
+    sip_equity: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Total monthly SIP towards equity-oriented funds.",
+    )
+    sip_debt: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Total monthly SIP towards debt / fixed income funds.",
+    )
+    current_life_cover: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Existing term life insurance cover (sum assured).",
+    )
+    recommended_income_multiple: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Recommended life cover in multiples of annual expenses or income.",
+    )
 
     def missing_fields(self) -> list[str]:
         """Return list of required fields that are still None."""
@@ -115,6 +147,42 @@ class FIREResult(BaseModel):
     fire_feasible: bool = Field(True, description="Whether the SIP amount is feasible relative to income")
     yearly_projections: list[YearlyProjection] = Field(default_factory=list)
     assumptions: dict[str, float] = Field(default_factory=dict)
+
+
+class FIREMonthPlan(BaseModel):
+    """Single month in the detailed FIRE plan timeline."""
+    month_index: int
+    age_years: float
+    equity_allocation: float
+    start_corpus: float
+    sip_equity: float
+    sip_debt: float
+    growth_equity: float
+    growth_debt: float
+    withdrawal: float
+    end_corpus: float
+
+
+class InsuranceGapAnalysis(BaseModel):
+    """Simple term life insurance gap analysis."""
+    required_cover: float
+    current_cover: float
+    gap: float
+    is_sufficient: bool
+
+
+class FIREPlanResult(BaseModel):
+    """
+    Rich FIRE plan output for API consumers.
+    Includes month-by-month plan and insurance gap,
+    built on top of the core FIREResult.
+    """
+    input: FIREInput
+    core_result: FIREResult
+    months: list[FIREMonthPlan]
+    estimated_retirement_age: float
+    insurance_gap: InsuranceGapAnalysis
+    warnings: list[str] = Field(default_factory=list)
 
 
 # ─── Conversation State ────────────────────────────────────────────────────
