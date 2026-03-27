@@ -38,17 +38,13 @@ def _parse_summary_strategy(line, funds):
 
             if amount > 0 and units > 0:
                 if fund_name not in funds:
-                    funds[fund_name] = {"isin": extracted_isin, "transactions": []}
+                    funds[fund_name] = {"isin": extracted_isin, "transactions": [], "current_nav": nav, "current_value": amount}
                 elif extracted_isin and not funds[fund_name].get("isin"):
                     funds[fund_name]["isin"] = extracted_isin
                     
-                funds[fund_name]["transactions"].append({
-                    "date": txn_date,
-                    "amount": amount,
-                    "units": units,
-                    "nav": nav,
-                    "type": "BUY"
-                })
+                # Update current NAV from summary without polluting transactions cache
+                funds[fund_name]["current_nav"] = nav
+                
         return True
     except Exception:
         return False

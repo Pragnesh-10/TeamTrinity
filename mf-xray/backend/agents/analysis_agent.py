@@ -2,7 +2,8 @@ from datetime import datetime
 from xirr_engine import xirr as xirr_brentq
 
 def calculate_xirr(cashflows):
-    return xirr_brentq(cashflows) * 100
+    res = xirr_brentq(cashflows) * 100
+    return round(res, 2)
 
 class AnalysisAgent:
     @staticmethod
@@ -20,11 +21,17 @@ class AnalysisAgent:
             # Support both old format (list) and new format (dict with transactions)
             if isinstance(fund_data, dict):
                 txns = fund_data.get("transactions", [])
+                current_nav = fund_data.get("current_nav")
             else:
                 txns = fund_data
+                current_nav = None
 
             txns.sort(key=lambda x: x["date"] if isinstance(x["date"], str) else x["date"].strftime("%Y-%m-%d"))
-            current_nav = txns[-1].get("nav", 100.0) if txns else 100.0
+            
+            # Use parsed summary NAV if available, else fallback to last transaction NAV
+            if not current_nav:
+                current_nav = txns[-1].get("nav", 100.0) if txns else 100.0
+                
             invested_in_fund = 0.0
             units_in_fund = 0.0
             
@@ -70,12 +77,17 @@ class AnalysisAgent:
             # Support both old format (list) and new format (dict with transactions)
             if isinstance(fund_data, dict):
                 txns = fund_data.get("transactions", [])
+                fund_nav = fund_data.get("current_nav")
             else:
                 txns = fund_data
+                fund_nav = None
 
             fund_cashflows = []
             fund_units = 0.0
-            fund_nav = txns[-1].get("nav", 100.0) if txns else 100.0
+            
+            if not fund_nav:
+                fund_nav = txns[-1].get("nav", 100.0) if txns else 100.0
+                
             for t in txns:
                 dt = t["date"]
                 if isinstance(dt, str):
