@@ -24,6 +24,12 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const clampNonNegative = (n) => {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return 0;
+    return Math.max(0, v);
+  };
+
   const updateField = (field, value) => {
     setForm((prev) => ({
       ...prev,
@@ -120,10 +126,11 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                 <label className="block text-sm text-gray-400 mb-1">Monthly Income (₹)</label>
                 <input
                   type="number"
+                  min={0}
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.monthly_income}
                   onChange={(e) =>
-                    updateField('monthly_income', Number(e.target.value))
+                    updateField('monthly_income', clampNonNegative(e.target.value))
                   }
                 />
               </div>
@@ -131,10 +138,11 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                 <label className="block text-sm text-gray-400 mb-1">Monthly Expenses (₹)</label>
                 <input
                   type="number"
+                  min={0}
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.monthly_expenses}
                   onChange={(e) =>
-                    updateField('monthly_expenses', Number(e.target.value))
+                    updateField('monthly_expenses', clampNonNegative(e.target.value))
                   }
                 />
               </div>
@@ -146,10 +154,11 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
               </label>
               <input
                 type="number"
+                min={0}
                 className="w-full bg-surface border border-border rounded-lg p-2"
                 value={form.existing_investments}
                 onChange={(e) =>
-                  updateField('existing_investments', Number(e.target.value))
+                  updateField('existing_investments', clampNonNegative(e.target.value))
                 }
               />
             </div>
@@ -194,10 +203,11 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                 </label>
                 <input
                   type="number"
+                  min={0}
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.sip_equity}
                   onChange={(e) =>
-                    updateField('sip_equity', Number(e.target.value))
+                    updateField('sip_equity', clampNonNegative(e.target.value))
                   }
                 />
               </div>
@@ -207,9 +217,10 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                 </label>
                 <input
                   type="number"
+                  min={0}
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.sip_debt}
-                  onChange={(e) => updateField('sip_debt', Number(e.target.value))}
+                  onChange={(e) => updateField('sip_debt', clampNonNegative(e.target.value))}
                 />
               </div>
             </div>
@@ -221,10 +232,11 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                 </label>
                 <input
                   type="number"
+                  min={0}
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.current_life_cover}
                   onChange={(e) =>
-                    updateField('current_life_cover', Number(e.target.value))
+                    updateField('current_life_cover', clampNonNegative(e.target.value))
                   }
                 />
               </div>
@@ -234,12 +246,13 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                 </label>
                 <input
                   type="number"
+                  min={0}
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.recommended_income_multiple}
                   onChange={(e) =>
                     updateField(
                       'recommended_income_multiple',
-                      Number(e.target.value)
+                      clampNonNegative(e.target.value)
                     )
                   }
                 />
