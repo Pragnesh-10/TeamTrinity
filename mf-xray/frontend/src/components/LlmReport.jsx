@@ -20,9 +20,9 @@ export default function LlmReport({ markdown }) {
     }
     if (line.match(/^[1-9]\. /)) {
       // List parsing
-      const bolded = line.split(/(\\*\\*.*?\\*\\*)/g).map((chunk, i) => {
+      const bolded = line.split(/(\*\*.*?\*\*)/g).map((chunk, i) => {
         if (chunk.startsWith('**') && chunk.endsWith('**')) {
-          return <strong key={i} className="text-white">{chunk.replace(/\\*\\*/g, '')}</strong>;
+          return <strong key={i} className="text-white">{chunk.replace(/\*\*/g, '')}</strong>;
         }
         return chunk;
       });
@@ -33,9 +33,9 @@ export default function LlmReport({ markdown }) {
     }
     
     // Default text with bold support
-    const bolded = line.split(/(\\*\\*.*?\\*\\*)/g).map((chunk, i) => {
+    const bolded = line.split(/(\*\*.*?\*\*)/g).map((chunk, i) => {
       if (chunk.startsWith('**') && chunk.endsWith('**')) {
-        return <strong key={i} className="text-white font-semibold">{chunk.replace(/\\*\\*/g, '')}</strong>;
+        return <strong key={i} className="text-white font-semibold">{chunk.replace(/\*\*/g, '')}</strong>;
       }
       return chunk;
     });

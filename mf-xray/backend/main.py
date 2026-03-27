@@ -83,6 +83,10 @@ class EnterpriseAgentOrchestrator:
             "per_fund_xirr": per_fund_xirr
         }
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 @app.post("/analyze-portfolio")
 async def analyze_portfolio(file: UploadFile = File(None), payload: str = Form(None), scenario: str = Form("Long-Term Wealth Growth"), tax_regime: str = Form("New Tax Regime")):
     target_data = None

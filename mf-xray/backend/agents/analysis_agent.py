@@ -1,5 +1,8 @@
 from datetime import datetime
-from utils.xirr import calculate_xirr
+from xirr_engine import xirr as xirr_brentq
+
+def calculate_xirr(cashflows):
+    return xirr_brentq(cashflows) * 100
 
 class AnalysisAgent:
     @staticmethod

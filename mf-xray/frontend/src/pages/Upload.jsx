@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload as UploadIcon, Play } from 'lucide-react';
 import { analyzePortfolio } from '../lib/api';
 
@@ -8,6 +8,11 @@ export default function Upload({ onResultReady }) {
   const [scenario, setScenario] = useState("Long-Term Wealth Growth");
   const [taxRegime, setTaxRegime] = useState("New Tax Regime");
   const fileInputRef = useRef(null);
+
+  // Cold-start: wake up Render free-tier instance on page load
+  useEffect(() => {
+    fetch("https://teamtrinity.onrender.com/health").catch(() => {});
+  }, []);
 
   const handleDemoClick = async () => {
     setLoading(true);
