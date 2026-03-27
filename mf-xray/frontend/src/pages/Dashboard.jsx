@@ -17,6 +17,21 @@ export default function Dashboard({ result, onReset }) {
     };
   }, [portfolio_summary?.total_current_value]);
 
+  const formattedXirr = useMemo(() => {
+    if (typeof xirr === 'number' && Number.isFinite(xirr)) {
+      return `${xirr.toFixed(2)}%`;
+    }
+
+    if (typeof xirr === 'string') {
+      const numeric = Number.parseFloat(xirr.replace('%', '').trim());
+      if (Number.isFinite(numeric)) {
+        return `${numeric.toFixed(2)}%`;
+      }
+    }
+
+    return xirr;
+  }, [xirr]);
+
   return (
     <div className="min-h-screen p-6 md:p-12 max-w-7xl mx-auto space-y-8">
       <header className="flex justify-between items-center pb-6 border-b border-border">
@@ -39,7 +54,7 @@ export default function Dashboard({ result, onReset }) {
         <div className="bg-surface p-6 rounded-2xl border border-border md:col-span-1 flex flex-col justify-center items-center text-center">
           <p className="text-gray-400 mb-2 font-medium uppercase tracking-wider text-xs">Portfolio XIRR</p>
           <h2 className="font-mono font-bold text-teal leading-none whitespace-nowrap tabular-nums drop-shadow-[0_0_15px_rgba(0,212,170,0.5)] text-3xl sm:text-4xl lg:text-5xl">
-            {xirr}
+            {formattedXirr}
           </h2>
 
         </div>
