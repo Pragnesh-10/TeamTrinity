@@ -39,16 +39,18 @@ class XRayAgent:
         audit_trail.append(
             "🔬 XRayAgent: ParserAgent initialized. Attempting data synthesis..."
         )
-        parse_result = await ParserAgent.parse(portfolio_data)
-
-        funds = parse_result.get("funds", {})
-        if not funds or parse_result.get("status") == "error":
-            audit_trail.append(
-                "⚠️ XRayAgent: Parser returned empty/error. "
-                "Falling back to simulated 6-fund demo portfolio."
-            )
+        
+        # If no portfolio data provided (demo mode), use demo data directly
+        if not portfolio_data:
+            audit_trail.append("⚠️ XRayAgent: No user data provided. Using simulated demo portfolio.")
             funds = _get_fallback_funds()
         else:
+            parse_result = await ParserAgent.parse(portfolio_data)
+            funds = parse_result.get("funds", {})
+            
+            if not funds or parse_result.get("status") == "error":
+                raise ValueError("Could not parse portfolio. Please ensure the CAS PDF is correct and unprotected.")
+            
             audit_trail.append(
                 f"✅ XRayAgent: ParserAgent isolated {len(funds)} mutual funds."
             )

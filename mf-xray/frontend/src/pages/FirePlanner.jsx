@@ -3,18 +3,18 @@ import { getFirePlan } from '../lib/api';
 
 export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' }) {
   const getDefaultForm = () => ({
-    age: 34,
-    monthly_income: 200000,
-    monthly_expenses: 80000,
-    target_retirement_age: 50,
-    existing_investments: 0,
+    age: '',
+    monthly_income: '',
+    monthly_expenses: '',
+    target_retirement_age: '',
+    existing_investments: '',
     expected_return: null,
     inflation_rate: null,
     equity_allocation_start: 0.8,
     equity_allocation_end: 0.5,
-    sip_equity: 0,
-    sip_debt: 0,
-    current_life_cover: 0,
+    sip_equity: '',
+    sip_debt: '',
+    current_life_cover: '',
     recommended_income_multiple: 15,
     ...initialInput,
   });
@@ -25,9 +25,17 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
   const [error, setError] = useState(null);
 
   const clampNonNegative = (n) => {
+    if (n === '') return '';
     const v = Number(n);
     if (!Number.isFinite(v)) return 0;
     return Math.max(0, v);
+  };
+
+  const updateNumberField = (field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value === '' ? '' : Number(value),
+    }));
   };
 
   const updateField = (field, value) => {
@@ -63,7 +71,10 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
       try {
         setLoading(true);
         setError(null);
-        const result = await getFirePlan(form);
+        const payload = Object.fromEntries(
+          Object.entries(form).map(([k, v]) => [k, v === '' ? null : v])
+        );
+        const result = await getFirePlan(payload);
         if (!cancelled) {
           setPlan(result);
         }
@@ -105,7 +116,7 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                   type="number"
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.age}
-                  onChange={(e) => updateField('age', Number(e.target.value))}
+                  onChange={(e) => updateNumberField('age', e.target.value)}
                 />
               </div>
               <div>
@@ -115,7 +126,7 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   value={form.target_retirement_age}
                   onChange={(e) =>
-                    updateField('target_retirement_age', Number(e.target.value))
+                    updateNumberField('target_retirement_age', e.target.value)
                   }
                 />
               </div>
@@ -173,9 +184,9 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   min={0}
                   max={100}
-                  value={form.equity_allocation_start * 100}
+                  value={form.equity_allocation_start === '' ? '' : form.equity_allocation_start * 100}
                   onChange={(e) =>
-                    updateField('equity_allocation_start', Number(e.target.value) / 100)
+                    updateField('equity_allocation_start', e.target.value === '' ? '' : Number(e.target.value) / 100)
                   }
                 />
               </div>
@@ -188,9 +199,9 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
                   className="w-full bg-surface border border-border rounded-lg p-2"
                   min={0}
                   max={100}
-                  value={form.equity_allocation_end * 100}
+                  value={form.equity_allocation_end === '' ? '' : form.equity_allocation_end * 100}
                   onChange={(e) =>
-                    updateField('equity_allocation_end', Number(e.target.value) / 100)
+                    updateField('equity_allocation_end', e.target.value === '' ? '' : Number(e.target.value) / 100)
                   }
                 />
               </div>
