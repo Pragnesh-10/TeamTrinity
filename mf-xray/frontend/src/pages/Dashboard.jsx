@@ -38,7 +38,7 @@ export default function Dashboard({ result, onReset }) {
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-surface p-6 rounded-2xl border border-border md:col-span-1 flex flex-col justify-center items-center text-center">
           <p className="text-gray-400 mb-2 font-medium uppercase tracking-wider text-xs">Portfolio XIRR</p>
-          <h2 className="text-5xl font-mono font-bold text-teal drop-shadow-[0_0_15px_rgba(0,212,170,0.5)]">
+          <h2 className="font-mono font-bold text-teal leading-none whitespace-nowrap tabular-nums drop-shadow-[0_0_15px_rgba(0,212,170,0.5)] text-4xl sm:text-5xl lg:text-6xl">
             {xirr}
           </h2>
 
