@@ -51,7 +51,7 @@ class EnterpriseAgentOrchestrator:
             audit_trail.append(f"ParserAgent isolated {len(funds)} distinct active mutual funds from source.")
             
         # 2. Analysis Agent
-        audit_trail.append("AnalysisAgent engaged. Deploying zero-cost numpy_financial engine to precisely solve non-periodic XIRR ranges.")
+        audit_trail.append("AnalysisAgent engaged. Computing true XIRR via scipy brentq solver.")
         portfolio_summary, xirr_str, fund_allocations, per_fund_xirr = AnalysisAgent.analyze(funds)
         portfolio_summary["allocations"] = fund_allocations
         
