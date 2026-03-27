@@ -1,0 +1,80 @@
+{
+  "portfolio": [
+    {
+      "fund_name": "Mirae Asset Large Cap Fund",
+      "transactions": [
+        {
+          "date": "2020-01-15",
+          "amount": 200000,
+          "units": 3500.5,
+          "nav": 57.13,
+          "type": "BUY"
+        },
+        {
+          "date": "2026-03-27",
+          "amount": 0,
+          "units": 0,
+          "nav": 125.40,
+          "type": "BUY"
+        }
+      ]
+    },
+    {
+      "fund_name": "Parag Parikh Flexi Cap Fund",
+      "transactions": [
+        {
+          "date": "2022-05-10",
+          "amount": 300000,
+          "units": 5555.5,
+          "nav": 54.0,
+          "type": "BUY"
+        },
+        {
+          "date": "2026-03-27",
+          "amount": 0,
+          "units": 0,
+          "nav": 85.20,
+          "type": "BUY"
+        }
+      ]
+    },
+    {
+      "fund_name": "HDFC Flexi Cap Fund",
+      "transactions": [
+        {
+          "date": "2021-08-01",
+          "amount": 150000,
+          "units": 1500.0,
+          "nav": 100.0,
+          "type": "BUY"
+        },
+        {
+          "date": "2026-03-27",
+          "amount": 0,
+          "units": 0,
+          "nav": 175.50,
+          "type": "BUY"
+        }
+      ]
+    },
+    {
+      "fund_name": "Nippon India Small Cap Fund",
+      "transactions": [
+        {
+          "date": "2023-11-20",
+          "amount": 100000,
+          "units": 850.2,
+          "nav": 117.61,
+          "type": "BUY"
+        },
+        {
+          "date": "2026-03-27",
+          "amount": 0,
+          "units": 0,
+          "nav": 185.33,
+          "type": "BUY"
+        }
+      ]
+    }
+  ]
+}
