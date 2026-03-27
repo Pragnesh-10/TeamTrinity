@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { getFirePlan } from '../lib/api';
 
 export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' }) {
-  const [form, setForm] = useState({
+  const getDefaultForm = () => ({
     age: 34,
-    monthly_income: 0,
-    monthly_expenses: 0,
+    monthly_income: 200000,
+    monthly_expenses: 80000,
     target_retirement_age: 50,
     existing_investments: 0,
     expected_return: null,
@@ -18,6 +18,7 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
     recommended_income_multiple: 15,
     ...initialInput,
   });
+  const [form, setForm] = useState(getDefaultForm);
 
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,6 +32,26 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
   };
 
   useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      ...initialInput,
+    }));
+  }, [initialInput]);
+
+  useEffect(() => {
+    const hasRequiredInputs =
+      Number(form.age) >= 18 &&
+      Number(form.target_retirement_age) > Number(form.age) &&
+      Number(form.monthly_income) > 0 &&
+      Number(form.monthly_expenses) > 0;
+
+    if (!hasRequiredInputs) {
+      setPlan(null);
+      setLoading(false);
+      setError(null);
+      return undefined;
+    }
+
     let cancelled = false;
     const handler = setTimeout(async () => {
       try {
@@ -308,7 +329,7 @@ export default function FirePlanner({ initialInput = {}, title = 'FIRE Planner' 
             </>
           ) : (
             <p className="text-gray-400 text-sm">
-              Fill in your details on the left to see a live FIRE plan here.
+              Enter valid age, retirement age, income, and expenses to generate your live FIRE plan.
             </p>
           )}
         </div>
