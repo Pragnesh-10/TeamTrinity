@@ -55,7 +55,7 @@ class XRayAgent:
 
         # ── Step 2: Analysis (XIRR, allocations) ────────────────────────
         audit_trail.append(
-            "📊 XRayAgent: AnalysisAgent engaged. Computing true XIRR via scipy brentq."
+            "📊 XRayAgent: AnalysisAgent engaged. Computing true XIRR via Newton-Raphson."
         )
         portfolio_summary, xirr_str, fund_allocations, per_fund_xirr = (
             AnalysisAgent.analyze(funds)

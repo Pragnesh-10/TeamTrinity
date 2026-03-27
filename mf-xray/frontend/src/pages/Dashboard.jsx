@@ -23,9 +23,14 @@ export default function Dashboard({ result, onReset }) {
     }
 
     if (typeof xirr === 'string') {
-      const numeric = Number.parseFloat(xirr.replace('%', '').trim());
-      if (Number.isFinite(numeric)) {
-        return `${numeric.toFixed(2)}%`;
+      const trimmed = xirr.trim();
+      const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*(%)?\s*$/);
+      if (match) {
+        const numeric = Number(match[1]);
+        const hasPercent = Boolean(match[2]);
+        if (Number.isFinite(numeric)) {
+          return `${numeric.toFixed(2)}${hasPercent ? '%' : ''}`;
+        }
       }
     }
 
