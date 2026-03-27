@@ -1,6 +1,6 @@
 """
 Master Concierge Orchestrator
-Handles conversation state, intent classification, and cross-agent data routing.
+Handles conversation state, intent classification using Ollama, and cross-agent data routing.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from models.schemas import (
     ChatResponse,
     FIREInput,
     XRayResult,
+    OllamaIntentExtraction,
 )
 from agents.xray_agent import XRayAgent
 from agents.fire_planner_agent import FIREPlannerAgent
@@ -46,7 +47,7 @@ class MasterConcierge:
 
     @staticmethod
     async def process_chat(session_id: str, message: str) -> ChatResponse:
-        """Handle incoming text message and route to appropriate agent."""
+        """Handle incoming text message and route to appropriate agent using Ollama."""
         state = _SESSIONS.get(session_id)
         if not state:
             return ChatResponse(
@@ -59,9 +60,12 @@ class MasterConcierge:
         msg_lower = message.lower()
 
         try:
+            # Parse intent and entities using open-source Ollama local model
+            parsed_intent = _ollama_intent_parser(message)
+
             # ── 1. Handle "Aha Moment" Handoff (Cross-Agent Routing) ──────────
             if state.awaiting_input == "fire_offer":
-                if _is_affirmative(msg_lower):
+                if parsed_intent.intent == "affirmative":
                     # User accepted the FIRE offer. Initialize FIRE with XRay data.
                     # This is the proactive cross-agent data passing req.
                     state.awaiting_input = "fire_fields"
@@ -89,13 +93,23 @@ class MasterConcierge:
                     _append_history(state, response_msg)
                     return ChatResponse(session_id=session_id, message=response_msg)
 
-            # ── 2. Handle FIRE Data Collection ────────────────────────────────
-            if state.awaiting_input == "fire_fields" or state.current_agent == "fire":
-                # Extract variables
-                _extract_fire_variables(msg_lower, state.fire_input)
+            # ── 2. Handle FIRE Data Collection & Updates ─────────────────────
+            # If we are already in the FIRE flow, or Ollama detected a 'provide_details' intent, route to FIRE
+            if state.awaiting_input == "fire_fields" or state.current_agent == "fire" or parsed_intent.intent == "provide_details" or "fire" in msg_lower or "retire" in msg_lower or "sip" in msg_lower:
+                
+                state.current_agent = "fire"
+                
+                # Apply extracted values
+                if parsed_intent.age is not None:
+                    state.fire_input.age = parsed_intent.age
+                if parsed_intent.monthly_income is not None:
+                    state.fire_input.monthly_income = parsed_intent.monthly_income
+                if parsed_intent.target_retirement_age is not None:
+                    state.fire_input.target_retirement_age = parsed_intent.target_retirement_age
                 
                 missing = state.fire_input.missing_fields()
                 if missing:
+                    state.awaiting_input = "fire_fields"
                     missing_str = ", ".join(m.replace("_", " ") for m in missing)
                     response_msg = f"Got it. I still need your: **{missing_str}**."
                     _append_history(state, response_msg)
@@ -122,37 +136,7 @@ class MasterConcierge:
                     data=fire_result.model_dump()
                 )
 
-            # ── 3. Intent Classification (Standalone messages) ────────────────
-            if "fire" in msg_lower or "retire" in msg_lower or "sip" in msg_lower:
-                state.current_agent = "fire"
-                state.awaiting_input = "fire_fields"
-                _extract_fire_variables(msg_lower, state.fire_input)
-                
-                missing = state.fire_input.missing_fields()
-                if missing:
-                    response_msg = "I can help you build a FIRE roadmap! Please provide your **age**, **monthly income**, and **target retirement age**."
-                    _append_history(state, response_msg)
-                    return ChatResponse(
-                        session_id=session_id,
-                        agent="fire",
-                        message=response_msg,
-                        awaiting="fire_fields"
-                    )
-                else:
-                    # Rare case: user provided everything in one go
-                    state.awaiting_input = None
-                    fire_result = FIREPlannerAgent.calculate(state.fire_input)
-                    state.fire_result = fire_result
-                    formatted_response = FIREPlannerAgent.format_result(fire_result, state.fire_input) + DISCLAIMER
-                    _append_history(state, formatted_response)
-                    return ChatResponse(
-                        session_id=session_id,
-                        agent="fire",
-                        message=formatted_response,
-                        data=fire_result.model_dump()
-                    )
-
-            # ── 4. Default Fallback ───────────────────────────────────────────
+            # ── 3. Default Fallback ───────────────────────────────────────────
             response_msg = (
                 "I am the Master Concierge. I can route your mutual fund portfolio to the **X-Ray Analysis Agent** "
                 "or run the **FIRE Path Planner** to help you retire early.\n\n"
@@ -233,57 +217,99 @@ def _append_history(state: ConversationState, message: str):
     state.history.append({"role": "assistant", "content": message})
 
 
-def _is_affirmative(text: str) -> bool:
-    """Detect 'yes', 'sure', 'ok', etc."""
+def _ollama_intent_parser(text: str) -> OllamaIntentExtraction:
+    """Uses local open-source llama model to parse intent and extract entities."""
+    system_prompt = '''You are a strict JSON intent router for a personal finance AI.
+Analyze the user utterance.
+Determine 'intent' as one of:
+- "affirmative": if user is agreeing to a yes/no question without providing financial details.
+- "provide_details": if user is providing ANY numbers related to age, income, salary, or retirement.
+- "other": for everything else.
+
+Also extract these numbers if present:
+- age (integer)
+- monthly_income (float, convert lakhs to exact number, e.g. 1.5 lakhs -> 150000)
+- target_retirement_age (integer)
+
+Output ONLY valid JSON matching this schema:
+{"intent": "...", "age": null, "monthly_income": null, "target_retirement_age": null}'''
+
+    try:
+        import ollama
+        response = ollama.chat(
+            model='llama3.2',
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': text}
+            ],
+            format=OllamaIntentExtraction.model_json_schema()
+        )
+        return OllamaIntentExtraction.model_validate_json(response['message']['content'])
+    except Exception as e:
+        print(f"Ollama failed: {e}. Falling back to regex.")
+        return _regex_fallback_parser(text)
+
+
+def _regex_fallback_parser(text: str) -> OllamaIntentExtraction:
+    """Fallback router when Ollama is unavailable."""
+    msg_lower = text.lower()
+    intent = "other"
+    
+    # 1. Affirmative check
     affirmative_words = {"yes", "yeah", "yep", "sure", "ok", "okay", "absolutely", "do it"}
-    text_clean = re.sub(r'[^a-zA-Z\s]', '', text).strip()
-    return any(word in text_clean for word in affirmative_words)
+    text_clean = re.sub(r'[^a-zA-Z\s]', '', msg_lower).strip()
+    if any(word in text_clean for word in affirmative_words):
+        intent = "affirmative"
 
-
-def _extract_fire_variables(text: str, fire_input: FIREInput):
-    """
-    Very crude NLP to extract numbers from text based on context.
-    E.g. "I am 30 years old", "income is 150000", "retire at 50"
-    """
-    # Age: "30 years old", "age 30", "i am 30"
-    age_match = re.search(r'(?:age|am)\s+(?:is\s+)?(\d{2})\b', text)
+    # 2. Details check
+    age = None
+    monthly_income = None
+    target_retirement_age = None
+    
+    # Age
+    age_match = re.search(r'(?:age|am)\s+(?:is\s+)?(\d{2})\b', msg_lower)
     if age_match:
         val = int(age_match.group(1))
         if 18 <= val <= 80:
-            fire_input.age = val
-
-    # Target retirement age: "retire at 50", "retirement age 55"
-    ret_match = re.search(r'retire(?:ment|d)?\s+(?:at|age|is|to)?\s*(?:to|at)?\s*(\d{2})\b', text)
+            age = val
+            
+    # Target retirement age
+    ret_match = re.search(r'retire(?:ment|d)?\s+(?:at|age|is|to)?\s*(?:to|at)?\s*(\d{2})\b', msg_lower)
     if ret_match:
         val = int(ret_match.group(1))
         if 25 <= val <= 85:
-            fire_input.target_retirement_age = val
+            target_retirement_age = val
 
-    # Income: "1.5 lakhs", "150000", "income 200000"
-    # Basic digit extraction near words like earn, income, salary
-    if "lakh" in text or "lac" in text:
-        lakh_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:lakh|lac)', text)
+    # Income
+    if "lakh" in msg_lower or "lac" in msg_lower:
+        lakh_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:lakh|lac)', msg_lower)
         if lakh_match:
-            fire_input.monthly_income = float(lakh_match.group(1)) * 100000
+            monthly_income = float(lakh_match.group(1)) * 100000
     else:
-        inc_match = re.search(r'(?:income|salary|earn|make)\s*(?:is)?\s*(\d{4,7})\b', text)
+        inc_match = re.search(r'(?:income|salary|earn|make)\s*(?:is)?\s*(\d{4,7})\b', msg_lower)
         if inc_match:
-            fire_input.monthly_income = float(inc_match.group(1))
-
-    # Also handle standalone numbers if we specifically asked for them
-    # If age is not set and we see a 2-digit number < 45
-    if not fire_input.age:
-        am = re.search(r'\b(\d{2})\b', text)
+            monthly_income = float(inc_match.group(1))
+            
+    # Standalone numbers
+    if not age:
+        am = re.search(r'\b(\d{2})\b', msg_lower)
         if am and 18 <= int(am.group(1)) <= 80 and not ret_match:
-             # Just a heuristic to guess age vs retirement age
              val = int(am.group(1))
              if val < 45:
-                 fire_input.age = val
-
-    # If retirement age is not set and we see a 2-digit number >= 40
-    if not fire_input.target_retirement_age:
-        rm = re.findall(r'\b(\d{2})\b', text)
+                 age = val
+    if not target_retirement_age:
+        rm = re.findall(r'\b(\d{2})\b', msg_lower)
         for val_str in rm:
             val = int(val_str)
-            if val >= 40 and val != fire_input.age:
-                fire_input.target_retirement_age = val
+            if val >= 40 and val != age:
+                target_retirement_age = val
+                
+    if age or monthly_income or target_retirement_age or "fire" in msg_lower or "retire" in msg_lower or "sip" in msg_lower:
+        intent = "provide_details"
+
+    return OllamaIntentExtraction(
+        intent=intent,
+        age=age,
+        monthly_income=monthly_income,
+        target_retirement_age=target_retirement_age
+    )

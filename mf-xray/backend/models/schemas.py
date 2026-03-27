@@ -12,6 +12,15 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
+# ─── Ollama Intent Extraction Model ─────────────────────────────────────────
+
+class OllamaIntentExtraction(BaseModel):
+    """Output from the open-source Ollama intent router."""
+    intent: str = Field(..., description="Must be one of: 'affirmative', 'provide_details', 'other'")
+    age: Optional[int] = None
+    monthly_income: Optional[float] = None
+    target_retirement_age: Optional[int] = None
+
 # ─── Portfolio & Transaction Models ─────────────────────────────────────────
 
 class Transaction(BaseModel):
