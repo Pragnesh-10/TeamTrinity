@@ -120,11 +120,11 @@ export default function Dashboard({ result, onReset }) {
                       </div>
                   </div>
               </div>
-              <div className="relative z-10 w-full rounded-2xl p-4 bg-[#0a0f1e]/50 border border-white/5 min-h-[350px]">
+                <div className="relative z-10 w-full rounded-2xl p-4 bg-[#0a0f1e]/50 border border-white/5 h-[350px]">
                   {per_fund_xirr && per_fund_xirr.length > 0 ? (
                   <XirrChart data={per_fund_xirr} />
                   ) : (
-                  <div className="flex flex-col items-center justify-center h-[300px] text-gray-500 space-y-3">
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-3">
                       <FileWarning className="w-10 h-10 opacity-20" />
                       <p className="text-sm font-medium">Insufficient cashflow historical data for granular rendering.</p>
                   </div>
