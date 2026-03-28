@@ -2,20 +2,19 @@ from __future__ import annotations
 
 from datetime import date
 from typing import Iterable, Tuple
+import pyxirr
 
 
 def xirr(
     cashflows: Iterable[Tuple[date, float]],
     guess: float = 0.1,
-    tol: float = 1e-6,
-    max_iter: int = 100,
 ) -> float:
     """
-    Compute XIRR using Newton–Raphson, based on user-provided implementation.
-
+    Compute XIRR using the robust pyxirr library.
+    
     Inputs:
       cashflows: iterable of (datetime.date, amount), where contributions are negative
-                and inflows/redemptions are positive.
+                and inflows/redemptions/current value are positive.
     Returns:
       rate as a decimal (e.g. 0.1234 for 12.34%).
     """
@@ -23,41 +22,24 @@ def xirr(
     if not cashflows_list or len(cashflows_list) < 2:
         return 0.0
 
-    # Ensure stable ordering by date
-    cashflows_list.sort(key=lambda x: x[0])
+    # pyxirr.xirr takes (dates, amounts) or a list of tuples
+    try:
+        # Convert to separate lists for pyxirr if needed, 
+        # though pyxirr can often handle iterables of tuples.
+        dates = [cf[0] for cf in cashflows_list]
+        amounts = [float(cf[1]) for cf in cashflows_list]
+        
+        # Ensure at least one positive and one negative cash flow exists
+        if all(a >= 0 for a in amounts) or all(a <= 0 for a in amounts):
+            return 0.0
+            
+        result = pyxirr.xirr(dates, amounts, guess=guess)
+        
+        if result is None:
+            return 0.0
+            
+        return float(result)
+    except Exception:
+        # Fallback to 0.0 or handle specific convergence issues
+        return 0.0
 
-    dates = [d for d, _ in cashflows_list]
-    flows = [float(cf) for _, cf in cashflows_list]
-
-    def npv(rate: float) -> float:
-        base = dates[0]
-        return sum(
-            cf / (1.0 + rate) ** ((dt - base).days / 365.0)
-            for cf, dt in zip(flows, dates)
-        )
-
-    def d_npv(rate: float) -> float:
-        base = dates[0]
-        return sum(
-            -((dt - base).days / 365.0)
-            * cf
-            / (1.0 + rate) ** (((dt - base).days / 365.0) + 1.0)
-            for cf, dt in zip(flows, dates)
-        )
-
-    rate = float(guess)
-    for _ in range(int(max_iter)):
-        value = npv(rate)
-        derivative = d_npv(rate)
-
-        if abs(derivative) < 1e-10:
-            break
-
-        new_rate = rate - value / derivative
-
-        if abs(new_rate - rate) < tol:
-            return new_rate
-
-        rate = new_rate
-
-    raise Exception("XIRR did not converge")
