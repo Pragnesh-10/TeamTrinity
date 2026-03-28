@@ -19,11 +19,10 @@ export default function Upload({ onResultReady }) {
     setLoading(true);
     try {
       const result = await analyzePortfolio(null, scenario, taxRegime);
-      if (result.detail) alert(result.detail);
-      else onResultReady(result);
+      onResultReady(result);
     } catch (e) {
       console.error(e);
-      alert("Error connecting to AI agents.");
+      alert(e?.message || "Error connecting to AI agents.");
     }
     setLoading(false);
   };
@@ -33,11 +32,10 @@ export default function Upload({ onResultReady }) {
     setLoading(true);
     try {
       const result = await analyzePortfolio(file, scenario, taxRegime);
-      if (result.detail) alert(result.detail);
-      else onResultReady(result);
+      onResultReady(result);
     } catch (e) {
       console.error(e);
-      alert("Pipeline error.");
+      alert(e?.message || "Analysis failed.");
     }
     setLoading(false);
   };
