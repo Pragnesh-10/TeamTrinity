@@ -107,18 +107,27 @@ def _parse_detailed_transaction_strategy(line, context):
             txn_type = "BUY"
             if "Redemption" in line or "Switch Out" in line or "Payout" in line or amount < 0 or units < 0:
                 txn_type = "SELL"
-                amount = -abs(amount)
+                if amount > 0: amount = -amount # Normalize outflows as positive in XIRR logic, but here we store as-is
+                # Wait, amount for SELL should ideally be positive (cash inflow to user)
+                # But to maintain compatibility with analysis_agent sign handling, 
+                # we'll keep the absolute value and let analysis_agent handle signs.
+                amount = abs(amount)
                 units = -abs(units)
+            elif "Reinvest" in line or "IDCW Reinvest" in line:
+                txn_type = "REINVEST"
+                amount = abs(amount)
+                units = abs(units)
                 
-            if amount != 0 and units != 0:
+            if amount != 0 or units != 0:
                 context['funds'][current_fund]["transactions"].append({
                     "date": txn_date,
-                    "amount": amount,
-                    "units": units,
-                    "nav": nav,
+                    "amount": float(amount),
+                    "units": float(units),
+                    "nav": float(nav),
                     "type": txn_type
                 })
-        return True
+            return True
+
     return False
 
 
@@ -129,9 +138,13 @@ def parse_pdf(file_path):
     """
     context = {
         'funds': {},
-        'current_fund': None
+        'current_fund': None,
+        'as_of_date': None
     }
     
+    # Common prefixes for the statement end date (as-of date)
+    PERIOD_END_REGEX = re.compile(r'(?:To|to|as of)\s+(\d{2}-[A-Za-z]{3}-\d{4})')
+
     try:
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
@@ -145,6 +158,15 @@ def parse_pdf(file_path):
                     if not line:
                         continue
                     
+                    # Try to capture the statement as-of date (period end)
+                    if not context['as_of_date']:
+                        period_match = PERIOD_END_REGEX.search(line)
+                        if period_match:
+                            try:
+                                context['as_of_date'] = datetime.strptime(period_match.group(1), "%d-%b-%Y").date()
+                            except ValueError:
+                                pass
+
                     # Apply regex parsing strategies sequentially
                     if _parse_summary_strategy(line, context['funds']):
                         continue
@@ -159,7 +181,11 @@ def parse_pdf(file_path):
             if len(v.get("transactions", [])) > 0
         }
         
-        return {"status": "success", "funds": filtered_funds}
+        return {
+            "status": "success", 
+            "funds": filtered_funds, 
+            "as_of_date": context['as_of_date'].strftime("%Y-%m-%d") if context['as_of_date'] else None
+        }
         
     except Exception as e:
-        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}

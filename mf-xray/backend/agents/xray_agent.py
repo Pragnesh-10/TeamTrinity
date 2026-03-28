@@ -44,9 +44,11 @@ class XRayAgent:
         if not portfolio_data:
             audit_trail.append("⚠️ XRayAgent: No user data provided. Using simulated demo portfolio.")
             funds = _get_fallback_funds()
+            as_of_date = None
         else:
             parse_result = await ParserAgent.parse(portfolio_data)
             funds = parse_result.get("funds", {})
+            as_of_date = parse_result.get("as_of_date")
             
             if not funds or parse_result.get("status") == "error":
                 raise ValueError("Could not parse portfolio. Please ensure the CAS PDF is correct and unprotected.")
@@ -57,12 +59,13 @@ class XRayAgent:
 
         # ── Step 2: Analysis (XIRR, allocations) ────────────────────────
         audit_trail.append(
-            "📊 XRayAgent: AnalysisAgent engaged. Computing true XIRR via Newton-Raphson."
+            "📊 XRayAgent: AnalysisAgent engaged. Computing professional-grade XIRR."
         )
         portfolio_summary, xirr_str, fund_allocations, per_fund_xirr = (
-            AnalysisAgent.analyze(funds)
+            AnalysisAgent.analyze(funds, as_of_date=as_of_date)
         )
         portfolio_summary["allocations"] = fund_allocations
+
 
         # ── Step 3: Finance (overlap, tax, expense) ─────────────────────
         audit_trail.append(

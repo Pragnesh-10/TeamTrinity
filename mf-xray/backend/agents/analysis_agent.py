@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from xirr_engine import xirr as xirr_brentq
 
 def calculate_xirr(cashflows):
@@ -7,16 +7,22 @@ def calculate_xirr(cashflows):
 
 class AnalysisAgent:
     @staticmethod
-    def analyze(parsed_funds):
+    def analyze(parsed_funds, as_of_date=None):
         """
-        Takes normalized funds dictionary.
+        Takes normalized funds dictionary and optional as_of_date string or date.
         Returns portfolio_summary, calculated xirr strings, fund_allocations.
         """
         total_invested = 0.0
         total_current_value = 0.0
         fund_allocations = {}
-        # Track latest transaction date for more accurate "as-of" XIRR calculation
+        portfolio_cashflows = []
+        
+        # Track latest transaction date if as_of_date not provided
         latest_txn_date = date(1900, 1, 1)
+
+        # Handle string as_of_date from parser
+        if isinstance(as_of_date, str):
+            as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
 
         for fund, fund_data in parsed_funds.items():
             if isinstance(fund_data, dict):
@@ -41,33 +47,36 @@ class AnalysisAgent:
                 if isinstance(dt, str):
                     dt = datetime.strptime(dt, "%Y-%m-%d").date()
                 
-                # Update latest date encountered
                 if dt > latest_txn_date:
                     latest_txn_date = dt
                     
                 amt = abs(float(t["amount"]))
                 u = abs(float(t["units"]))
+                ttype = t.get("type", "BUY")
                 
-                if t["type"] == "BUY":
+                if ttype == "BUY":
                     invested_in_fund += amt
                     units_in_fund += u
                     portfolio_cashflows.append((dt, -amt))
-                else:
+                elif ttype == "SELL":
                     invested_in_fund = max(0, invested_in_fund - amt)
                     units_in_fund = max(0, units_in_fund - u)
                     portfolio_cashflows.append((dt, amt))
+                elif ttype == "REINVEST":
+                    # For financial analysts: Reinvested dividends are internal. 
+                    # No external cash flow, but units increase.
+                    units_in_fund += u
                     
             value = units_in_fund * current_nav
             total_invested += invested_in_fund
             total_current_value += value
             fund_allocations[fund] = value
 
-        # Use the either today or the latest txn date if today is somehow earlier (unlikely but safe)
-        as_of_date = max(datetime.today().date(), latest_txn_date)
+        # Final terminal date: extraction from PDF (preferred) > today > latest txn
+        terminal_date = as_of_date or max(datetime.today().date(), latest_txn_date)
             
-        # Complete XIRR array with current value
         if total_current_value > 0:
-            portfolio_cashflows.append((as_of_date, total_current_value))
+            portfolio_cashflows.append((terminal_date, total_current_value))
             
         try:
             xirr_val = calculate_xirr(portfolio_cashflows)
@@ -103,14 +112,19 @@ class AnalysisAgent:
                     dt = datetime.strptime(dt, "%Y-%m-%d").date()
                 amt = abs(float(t["amount"]))
                 u = abs(float(t["units"]))
-                if t["type"] == "BUY":
+                ttype = t.get("type", "BUY")
+                
+                if ttype == "BUY":
                     fund_cashflows.append((dt, -amt))
                     fund_units += u
-                else:
+                elif ttype == "SELL":
                     fund_cashflows.append((dt, amt))
                     fund_units = max(0, fund_units - u)
+                elif ttype == "REINVEST":
+                    fund_units += u
+
             current_val = fund_units * fund_nav
-            fund_cashflows.append((as_of_date, current_val))
+            fund_cashflows.append((terminal_date, current_val))
             try:
                 f_xirr = calculate_xirr(fund_cashflows)
             except Exception:
@@ -122,5 +136,6 @@ class AnalysisAgent:
             })
         
         return summary, f"{xirr_val}%", fund_allocations, per_fund_xirr
+
 
 
