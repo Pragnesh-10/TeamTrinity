@@ -27,9 +27,9 @@ class ParserAgent:
                 return {"status": "success", "funds": parsed_data}
                 
             elif hasattr(payload, "read"):
+                import tempfile
                 job_id = str(uuid.uuid4())
-                os.makedirs("/tmp/mf-xray", exist_ok=True)
-                file_path = f"/tmp/mf-xray/{job_id}.pdf"
+                file_path = os.path.join(tempfile.gettempdir(), f"mf_xray_{job_id}.pdf")
                 content = await payload.read()
                 with open(file_path, "wb") as f:
                     f.write(content)
@@ -40,9 +40,16 @@ class ParserAgent:
                     sys.path.insert(0, backend_dir)
                 from pdf_parser import parse_pdf
                 result = parse_pdf(file_path)
+                
+                # Clean up the file after parsing
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+                    
                 return result
                 
             return {"status": "error", "funds": {}, "message": f"Invalid input format: {type(payload)}"}
         except Exception as e:
             # Absolute crash safety — never let the parser bring down the pipeline
-            return {"status": "error", "funds": {}, "message": f"Parser exception: {str(e)}"}
+            return {"status": "error", "funds": {}, "message": str(e)}

@@ -51,7 +51,10 @@ class XRayAgent:
             as_of_date = parse_result.get("as_of_date")
             
             if not funds or parse_result.get("status") == "error":
-                raise ValueError("Could not parse portfolio. Please ensure the CAS PDF is correct and unprotected.")
+                msg = parse_result.get("message", "Unknown parsing error.")
+                if "password" in msg.lower():
+                    raise ValueError(f"PDF is password protected. Please upload an unprotected version. (Error: {msg})")
+                raise ValueError(f"Could not extract mutual fund data from this PDF. {msg}")
             
             audit_trail.append(
                 f"✅ XRayAgent: ParserAgent isolated {len(funds)} mutual funds."

@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, date
 from xirr_engine import xirr as xirr_brentq
 
 def calculate_xirr(cashflows):
@@ -18,7 +18,7 @@ class AnalysisAgent:
         portfolio_cashflows = []
         
         # Track latest transaction date if as_of_date not provided
-        latest_txn_date = date(1900, 1, 1)
+        latest_txn_date = datetime(1900, 1, 1).date()
 
         # Handle string as_of_date from parser
         if isinstance(as_of_date, str):

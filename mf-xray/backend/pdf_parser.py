@@ -3,12 +3,12 @@ import re
 from datetime import datetime
 import traceback
 
-DATE_REGEX = re.compile(r'^(\d{2}-[A-Za-z]{3}-\d{4})\s+')
+DATE_REGEX = re.compile(r'(\d{2}-[A-Za-z]{3}-\d{4})')
 
 def _parse_summary_strategy(line, funds):
     """Strategy: Extract data from the summary table format."""
     match_summary = re.search(r'(\d{2}-[A-Za-z]{3}-\d{4})', line)
-    if DATE_REGEX.match(line) or not match_summary:
+    if not match_summary:
         return False
 
     date_str = match_summary.group(1)
@@ -52,20 +52,23 @@ def _parse_summary_strategy(line, funds):
 
 def _parse_detailed_header_strategy(line, context):
     """Strategy: Detect fund headers in the detailed statement section."""
-    if ("Folio No" in line) or ("Fund" in line and "Option" in line) or ("Plan" in line and "Growth" in line):
+    if ("Folio No" in line) or ("Fund" in line and "Option" in line) or ("Plan" in line and "Growth" in line) or ("Account No" in line):
         if "Folio Number:" in line:
-            current_fund = line.split("Folio Number:")[0].strip()
+            current_fund = line.split("Folio Number:")[1].strip() if "Folio Number:" in line else line
         elif "Folio No" in line:
             current_fund = line.split("Folio No")[0].strip()
         else:
             current_fund = line
 
         current_fund = re.sub(r'[^a-zA-Z0-9 &\-]', '', current_fund).strip()
-        if current_fund:
+        # Clean up common noise in fund names
+        current_fund = re.sub(r'\s+', ' ', current_fund)
+
+        if current_fund and len(current_fund) > 5:
             context['current_fund'] = current_fund
             if current_fund not in context['funds']:
                 context['funds'][current_fund] = {"isin": None, "transactions": []}
-        return True
+            return True
     return False
 
 
@@ -78,56 +81,50 @@ def _parse_detailed_transaction_strategy(line, context):
         date_str = match.group(1)
         try:
             txn_date = datetime.strptime(date_str, "%d-%b-%Y").date()
+            # Update internal latest date tracker for fallback as-of-date
+            if not context['max_txn_date'] or txn_date > context['max_txn_date']:
+                context['max_txn_date'] = txn_date
         except ValueError:
             return False
             
-        parts = line[match.end():].split()
-        numbers = []
-        for part in reversed(parts):
-            clean_part = part.replace(',', '')
-            is_negative = False
-            if clean_part.startswith('(') and clean_part.endswith(')'):
-                is_negative = True
-                clean_part = clean_part[1:-1]
-            
-            try:
-                val = float(clean_part)
-                if is_negative: val = -val
-                numbers.append(val)
-            except ValueError:
-                break
+        # Extract numbers using a more robust approach that doesn't rely solely on whitespace
+        # We look for amounts, units, and NAV which are typically at the end of the line
+        numbers = re.findall(r'\(?[\d,]+\.\d+\)?', line[match.end():])
+        clean_numbers = []
+        for n in numbers:
+            is_neg = n.startswith('(') and n.endswith(')')
+            val = float(n.replace('(', '').replace(')', '').replace(',', ''))
+            clean_numbers.append(-val if is_neg else val)
                 
-        numbers.reverse()
-        
-        if len(numbers) >= 3:
-            amount = numbers[0]
-            units = numbers[1]
-            nav = numbers[2]
+        if len(clean_numbers) >= 2:
+            # Usually: Amount, Units, NAV. If only 2, NAV might be missing or merged.
+            amount = clean_numbers[0]
+            units = clean_numbers[1]
+            nav = clean_numbers[2] if len(clean_numbers) >= 3 else (abs(amount/units) if units != 0 else 0)
             
+            line_lower = line.lower()
             txn_type = "BUY"
-            if "Redemption" in line or "Switch Out" in line or "Payout" in line or amount < 0 or units < 0:
+            if any(kw in line_lower for kw in ["redemption", "switch out", "payout", "sell"]):
                 txn_type = "SELL"
-                if amount > 0: amount = -amount # Normalize outflows as positive in XIRR logic, but here we store as-is
-                # Wait, amount for SELL should ideally be positive (cash inflow to user)
-                # But to maintain compatibility with analysis_agent sign handling, 
-                # we'll keep the absolute value and let analysis_agent handle signs.
-                amount = abs(amount)
-                units = -abs(units)
-            elif "Reinvest" in line or "IDCW Reinvest" in line:
+                amount = -abs(amount) # Cash flow from user's perspective (negative if reinvesting, but here we normalize)
+                # For XIRR, internal logic usually expects:
+                # Investment: NEGATIVE cash flow
+                # Redemption: POSITIVE cash flow
+                # However, our parser returns numbers which analysis_agent will sign.
+                # Standardizing:
+                amount = -abs(amount) # Parser says 'Investment'
+                if txn_type == "SELL": amount = abs(amount) # Parser says 'Inflow'
+            elif any(kw in line_lower for kw in ["reinvest", "idcw", "dividend"]):
                 txn_type = "REINVEST"
-                amount = abs(amount)
-                units = abs(units)
-                
-            if amount != 0 or units != 0:
-                context['funds'][current_fund]["transactions"].append({
-                    "date": txn_date,
-                    "amount": float(amount),
-                    "units": float(units),
-                    "nav": float(nav),
-                    "type": txn_type
-                })
+            
+            context['funds'][current_fund]["transactions"].append({
+                "date": txn_date,
+                "amount": float(amount),
+                "units": float(units),
+                "nav": float(nav),
+                "type": txn_type
+            })
             return True
-
     return False
 
 
@@ -139,7 +136,8 @@ def parse_pdf(file_path):
     context = {
         'funds': {},
         'current_fund': None,
-        'as_of_date': None
+        'as_of_date': None,
+        'max_txn_date': None
     }
     
     # Common prefixes for the statement end date (as-of date)
@@ -181,10 +179,13 @@ def parse_pdf(file_path):
             if len(v.get("transactions", [])) > 0
         }
         
+        # Fallback to latest transaction date if period header missing
+        final_as_of = context['as_of_date'] or context['max_txn_date']
+        
         return {
             "status": "success", 
             "funds": filtered_funds, 
-            "as_of_date": context['as_of_date'].strftime("%Y-%m-%d") if context['as_of_date'] else None
+            "as_of_date": final_as_of.strftime("%Y-%m-%d") if final_as_of else None
         }
         
     except Exception as e:
