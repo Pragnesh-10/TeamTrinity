@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "https://teamtrinity.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://teamtrinity.onrender.com"; // UPDATE this once you host your own backend on Render
 
 function messageFromDetail(detail) {
   if (detail == null) return null;
