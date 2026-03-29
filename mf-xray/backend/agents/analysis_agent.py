@@ -28,9 +28,11 @@ class AnalysisAgent:
             if isinstance(fund_data, dict):
                 txns = fund_data.get("transactions", [])
                 current_nav = fund_data.get("current_nav")
+                reported_current_value = fund_data.get("current_value", 0.0)
             else:
                 txns = fund_data
                 current_nav = None
+                reported_current_value = 0.0
 
             txns.sort(key=lambda x: x["date"] if isinstance(x["date"], str) else x["date"].strftime("%Y-%m-%d"))
             
@@ -42,6 +44,14 @@ class AnalysisAgent:
             invested_in_fund = 0.0
             units_in_fund = 0.0
             
+            if not txns and reported_current_value > 0:
+                # Fallback for summary-only statements without transaction details
+                value = reported_current_value
+                total_invested += value # We have to assume invested == current_value in absence of details to prevent infinity returns
+                total_current_value += value
+                fund_allocations[fund] = value
+                continue
+
             for t in txns:
                 dt = t["date"]
                 if isinstance(dt, str):
@@ -94,9 +104,11 @@ class AnalysisAgent:
             if isinstance(fund_data, dict):
                 txns = fund_data.get("transactions", [])
                 fund_nav = fund_data.get("current_nav")
+                reported_current_value = fund_data.get("current_value", 0.0)
             else:
                 txns = fund_data
                 fund_nav = None
+                reported_current_value = 0.0
 
             fund_cashflows = []
             fund_units = 0.0
@@ -105,6 +117,14 @@ class AnalysisAgent:
                 fund_nav = txns[-1].get("nav", 100.0)
             elif not fund_nav:
                 fund_nav = 100.0
+
+            if not txns and reported_current_value > 0:
+                per_fund_xirr.append({
+                    "fund_name": fund,
+                    "xirr_pct": 0.0,
+                    "current_value": round(reported_current_value, 2)
+                })
+                continue
                 
             for t in txns:
                 dt = t["date"]
