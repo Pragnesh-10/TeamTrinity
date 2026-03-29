@@ -1,4 +1,4 @@
-from backend.pdf_parser import *
+from backend.pdf_parser import _parse_detailed_transaction_strategy, _parse_summary_strategy
 
 context = {'funds': {}, 'current_fund': None, 'as_of_date': None, 'max_txn_date': None}
 

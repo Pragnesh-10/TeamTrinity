@@ -86,19 +86,22 @@ def _parse_summary_strategy(line, funds):
                     
                 # Update current NAV from summary without polluting transactions cache
                 funds[fund_name]["current_nav"] = nav
+                return True
                 
-        return True
+        return False
     except Exception:
         return False
 
 
 def _parse_detailed_header_strategy(line, context):
     """Strategy: Detect fund headers in the detailed statement section."""
-    if ("Folio No" in line) or ("Fund" in line and "Option" in line) or ("Plan" in line and "Growth" in line) or ("Account No" in line):
+    if ("Folio No" in line) or ("Folio Number" in line) or ("Fund" in line and "Option" in line) or ("Plan" in line and "Growth" in line) or ("Account No" in line):
         if "Folio Number:" in line:
-            current_fund = line.split("Folio Number:")[1].strip() if "Folio Number:" in line else line
+            parts = line.split("Folio Number:")
+            current_fund = parts[0].strip() if parts[0].strip() else parts[1].strip()
         elif "Folio No" in line:
-            current_fund = line.split("Folio No")[0].strip()
+            parts = line.split("Folio No")
+            current_fund = parts[0].strip() if parts[0].strip() else parts[1].strip()
         else:
             current_fund = line
 
@@ -139,10 +142,19 @@ def _parse_detailed_transaction_strategy(line, context):
             clean_numbers.append(-val if is_neg else val)
                 
         if len(clean_numbers) >= 2:
-            # Usually: Amount, Units, NAV. If only 2, NAV might be missing or merged.
-            amount = clean_numbers[0]
-            units = clean_numbers[1]
-            nav = clean_numbers[2] if len(clean_numbers) >= 3 else (abs(amount/units) if units != 0 else 0)
+            # Usually: Amount, Units, NAV are towards the end. Might include Balance at the very end.
+            if len(clean_numbers) >= 4:
+                amount = clean_numbers[-4]
+                units = clean_numbers[-3]
+                nav = clean_numbers[-2]
+            elif len(clean_numbers) == 3:
+                amount = clean_numbers[-3]
+                units = clean_numbers[-2]
+                nav = clean_numbers[-1]
+            else:
+                amount = clean_numbers[-2]
+                units = clean_numbers[-1]
+                nav = abs(amount/units) if units != 0 else 0
             
             line_lower = line.lower()
             txn_type = "BUY"
