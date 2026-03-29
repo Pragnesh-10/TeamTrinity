@@ -43,7 +43,7 @@ def _parse_summary_strategy(line, funds):
         if first_word_match and any(char.isdigit() for char in first_word_match.group(1)):
             name_part = re.sub(r'^\S+(/\S+)?\s+', '', name_part)
 
-        nums_before = re.findall(r'(?<!\S)[\d,]+(?:\.\d+)?(?!\S)', name_part)
+        nums_before = re.findall(r'(?<!\S)\d[\d,]*(?:\.\d+)?(?!\S)', name_part)
         
         fund_name = name_part
         for n in nums_before:
@@ -65,7 +65,7 @@ def _parse_summary_strategy(line, funds):
             amount = float(nums_before[-2].replace(',', ''))
             units = float(nums_before[-1].replace(',', ''))
 
-            nums_after = re.findall(r'[\d,]+(?:\.\d+)?', nav_part) if nav_part else []
+            nums_after = re.findall(r'\d[\d,]*(?:\.\d+)?', nav_part) if nav_part else []
             if not nums_after and len(nums_before) >= 3:
                 # If there was no nav_part because the date was at the beginning,
                 # the 3rd last number might logically be the amount, and last is NAV.
@@ -134,11 +134,14 @@ def _parse_detailed_transaction_strategy(line, context):
             
         # Extract numbers using a more robust approach that doesn't rely solely on whitespace
         # We look for amounts, units, and NAV which are typically at the end of the line
-        numbers = re.findall(r'\(?[\d,]+(?:\.\d+)?\)?', line[match.end():])
+        numbers = re.findall(r'\(?\d[\d,]*(?:\.\d+)?\)?', line[match.end():])
         clean_numbers = []
         for n in numbers:
+            clean_str = n.replace('(', '').replace(')', '').replace(',', '')
+            if not clean_str:
+                continue
             is_neg = n.startswith('(') and n.endswith(')')
-            val = float(n.replace('(', '').replace(')', '').replace(',', ''))
+            val = float(clean_str)
             clean_numbers.append(-val if is_neg else val)
                 
         if len(clean_numbers) >= 2:

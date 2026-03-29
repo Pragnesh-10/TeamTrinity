@@ -9,6 +9,14 @@ class ParserAgent:
         Normalizes into a standard list of holdings with cashflows.
         Always returns a dict with 'status' and 'funds' keys - never crashes.
         """
+        def safe_float(val, default=0.0):
+            if val is None or val == "":
+                return default
+            try:
+                return float(str(val).replace(',', '').replace(' ', ''))
+            except ValueError:
+                return default
+
         try:
             parsed_data = {}
             
@@ -21,20 +29,22 @@ class ParserAgent:
                     # Handle new format: transactions array inside fund object
                     if "transactions" in item:
                         for txn in item["transactions"]:
+                            amt = safe_float(txn.get("amount"), 0.0)
                             parsed_data[fund].append({
                                 "date": txn["date"],
-                                "amount": float(txn["amount"]),
-                                "units": float(txn.get("units", txn["amount"] / 100.0)),
-                                "nav": float(txn.get("nav", 100.0)),
+                                "amount": amt,
+                                "units": safe_float(txn.get("units"), amt / 100.0 if amt else 0.0),
+                                "nav": safe_float(txn.get("nav"), 100.0),
                                 "type": txn.get("type", "BUY")
                             })
                     else:
                         # Handle flat format
+                        amt = safe_float(item.get("amount"), 0.0)
                         parsed_data[fund].append({
                             "date": item["date"],
-                            "amount": float(item["amount"]),
-                            "units": float(item.get("units", item["amount"] / 100.0)),
-                            "nav": float(item.get("nav", 100.0)),
+                            "amount": amt,
+                            "units": safe_float(item.get("units"), amt / 100.0 if amt else 0.0),
+                            "nav": safe_float(item.get("nav"), 100.0),
                             "type": item.get("type", "BUY")
                         })
                 return {"status": "success", "funds": parsed_data}
