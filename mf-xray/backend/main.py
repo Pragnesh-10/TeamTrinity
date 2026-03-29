@@ -164,6 +164,8 @@ async def legacy_analyze_portfolio(
             "audit_trail": audit_trail,
             "per_fund_xirr": xray_result.per_fund_xirr
         }
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         import traceback
         traceback.print_exc()

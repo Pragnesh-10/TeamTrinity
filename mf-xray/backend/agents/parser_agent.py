@@ -17,17 +17,42 @@ class ParserAgent:
                     fund = item["fund_name"]
                     if fund not in parsed_data:
                         parsed_data[fund] = []
-                    parsed_data[fund].append({
-                        "date": item["date"],
-                        "amount": float(item["amount"]),
-                        "units": float(item.get("units", item["amount"] / 100.0)),
-                        "nav": float(item.get("nav", 100.0)),
-                        "type": item.get("type", "BUY")
-                    })
+                        
+                    # Handle new format: transactions array inside fund object
+                    if "transactions" in item:
+                        for txn in item["transactions"]:
+                            parsed_data[fund].append({
+                                "date": txn["date"],
+                                "amount": float(txn["amount"]),
+                                "units": float(txn.get("units", txn["amount"] / 100.0)),
+                                "nav": float(txn.get("nav", 100.0)),
+                                "type": txn.get("type", "BUY")
+                            })
+                    else:
+                        # Handle flat format
+                        parsed_data[fund].append({
+                            "date": item["date"],
+                            "amount": float(item["amount"]),
+                            "units": float(item.get("units", item["amount"] / 100.0)),
+                            "nav": float(item.get("nav", 100.0)),
+                            "type": item.get("type", "BUY")
+                        })
                 return {"status": "success", "funds": parsed_data}
                 
             elif hasattr(payload, "read"):
                 import tempfile
+                import json
+                
+                # Check if it's a JSON file uploaded via form data
+                filename = getattr(payload, "filename", "")
+                if filename.lower().endswith('.json'):
+                    content = await payload.read()
+                    try:
+                        json_payload = json.loads(content)
+                        return await ParserAgent.parse(json_payload)
+                    except Exception as e:
+                        return {"status": "error", "funds": {}, "message": f"Invalid JSON file: {e}"}
+
                 job_id = str(uuid.uuid4())
                 file_path = os.path.join(tempfile.gettempdir(), f"mf_xray_{job_id}.pdf")
                 content = await payload.read()
